@@ -27,7 +27,7 @@ def log(message):
     print(text, flush=True)
     try:
         base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.getcwd()
-        with open(os.path.join(base_dir, 'hero_recovered.log'), 'a', encoding='utf-8') as f:
+        with open(os.path.join(base_dir, 'yingxionggu.log'), 'a', encoding='utf-8') as f:
             f.write(text + '\n')
     except Exception:
         pass

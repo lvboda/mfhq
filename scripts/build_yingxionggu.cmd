@@ -20,7 +20,7 @@ if %errorlevel%==0 (
 if errorlevel 1 goto fail
 
 echo.
-echo SUCCESS: dist\hero_recovered.exe
+echo SUCCESS: dist\yingxionggu.exe
 pause
 exit /b 0
 

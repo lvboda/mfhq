@@ -25,5 +25,5 @@ jobs:
         with:
           name: mfhq-windows-exe
           path: |
-            dist\hero_recovered.exe
+            dist\yingxionggu.exe
             dist\mfhq_controller.exe

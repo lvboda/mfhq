@@ -63,13 +63,13 @@ def build_yingxionggu(python):
         "--onefile",
         "--console",
         "--name",
-        "hero_recovered",
+        "yingxionggu",
         *add_data_args(PHOTO_DIR, "photo"),
         "--paths",
         str(SRC_DIR),
         str(SRC_DIR / "yingxionggu.py"),
     )
-    print(f"SUCCESS: {DIST_DIR / 'hero_recovered.exe'}")
+    print(f"SUCCESS: {DIST_DIR / 'yingxionggu.exe'}")
 
 
 def build_controller(python):
