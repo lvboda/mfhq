@@ -11,6 +11,18 @@ PHOTO_DIR = SRC_DIR / "common" / "photo"
 DIST_DIR = ROOT / "dist"
 PIP_INDEX = "https://mirrors.cloud.tencent.com/pypi/simple"
 PIP_TRUST_HOST = "mirrors.cloud.tencent.com"
+EXCLUDED_MODULES = [
+    "IPython",
+    "PyQt5",
+    "PyQt6",
+    "PySide2",
+    "PySide6",
+    "matplotlib",
+    "pytest",
+    "test",
+    "tkinter",
+    "unittest",
+]
 
 
 def run(cmd):
@@ -47,6 +59,7 @@ def install_dependencies(python):
         "10",
     ]
     run([python, "-m", "pip", "install", "--upgrade", "pip", "-i", PIP_INDEX, "--trusted-host", PIP_TRUST_HOST])
+    run([python, "-m", "pip", "uninstall", "-y", "opencv-python", "opencv-contrib-python"])
     run([*pip_args, "-e", ".[build]"])
 
 
@@ -58,6 +71,13 @@ def add_data_args(source, dest):
     return ["--add-data", f"{source}{os.pathsep}{dest}"]
 
 
+def exclude_module_args():
+    args = []
+    for module in EXCLUDED_MODULES:
+        args.extend(["--exclude-module", module])
+    return args
+
+
 def build_yingxionggu(python):
     pyinstaller(
         python,
@@ -67,6 +87,7 @@ def build_yingxionggu(python):
         "--name",
         "hero_recovered",
         *add_data_args(PHOTO_DIR, "photo"),
+        *exclude_module_args(),
         "--paths",
         str(SRC_DIR),
         str(SRC_DIR / "yingxionggu.py"),
@@ -82,6 +103,7 @@ def build_controller(python):
         "--noconsole",
         "--name",
         "mfhq_controller",
+        *exclude_module_args(),
         "--paths",
         str(SRC_DIR),
         str(SRC_DIR / "controller.py"),
