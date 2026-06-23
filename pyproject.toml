@@ -7,7 +7,7 @@ name = "mfhq-scripts"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "opencv-python-headless",
+    "opencv-python",
     "numpy",
     "pyautogui",
     "pywin32; platform_system == 'Windows'",
