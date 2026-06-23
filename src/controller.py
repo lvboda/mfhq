@@ -65,7 +65,7 @@ def stop_script():
 
 def log(message):
     try:
-        path = app_dir() / "mfhq_controller.log"
+        path = app_dir() / "controller.log"
         stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with path.open("a", encoding="utf-8") as f:
             f.write(f"[{stamp}] {message}\n")

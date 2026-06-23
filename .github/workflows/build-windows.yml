@@ -26,4 +26,4 @@ jobs:
           name: mfhq-windows-exe
           path: |
             dist\yingxionggu.exe
-            dist\mfhq_controller.exe
+            dist\controller.exe

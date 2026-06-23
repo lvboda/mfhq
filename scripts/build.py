@@ -79,12 +79,12 @@ def build_controller(python):
         "--onefile",
         "--noconsole",
         "--name",
-        "mfhq_controller",
+        "controller",
         "--paths",
         str(SRC_DIR),
         str(SRC_DIR / "controller.py"),
     )
-    print(f"SUCCESS: {DIST_DIR / 'mfhq_controller.exe'}")
+    print(f"SUCCESS: {DIST_DIR / 'controller.exe'}")
 
 
 def main():

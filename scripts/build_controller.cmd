@@ -20,7 +20,7 @@ if %errorlevel%==0 (
 if errorlevel 1 goto fail
 
 echo.
-echo SUCCESS: dist\mfhq_controller.exe
+echo SUCCESS: dist\controller.exe
 pause
 exit /b 0
 
