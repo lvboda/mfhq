@@ -16,16 +16,16 @@ if %errorlevel%==0 (
   )
 )
 
-%PYTHON% scripts\build.py controller
+%PYTHON% scripts\build.py all
 if errorlevel 1 goto fail
 
 echo.
-echo SUCCESS: dist\controller.exe
+echo SUCCESS: dist\mfhq.exe
 pause
 exit /b 0
 
 :fail
 echo.
-echo ERROR: controller build failed.
+echo ERROR: build failed.
 pause
 exit /b 1

@@ -29,7 +29,7 @@ def start():
     tool.find_and_click(const.shi)
 
 
-if __name__ == '__main__':
+def main():
     if not tool.is_mofa_haqi_running():
         tool.start_mofa_haqi()
         tool.login_mofa_haqi()
@@ -39,3 +39,7 @@ if __name__ == '__main__':
     while True:
         start()
         time.sleep(2)
+
+
+if __name__ == '__main__':
+    main()

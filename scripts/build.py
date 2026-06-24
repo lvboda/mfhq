@@ -11,6 +11,8 @@ PHOTO_DIR = SRC_DIR / "common" / "photo"
 DIST_DIR = ROOT / "dist"
 PIP_INDEX = "https://mirrors.cloud.tencent.com/pypi/simple"
 PIP_TRUST_HOST = "mirrors.cloud.tencent.com"
+
+
 def run(cmd):
     print("+ " + " ".join(str(part) for part in cmd), flush=True)
     subprocess.check_call([str(part) for part in cmd], cwd=ROOT)
@@ -56,54 +58,41 @@ def add_data_args(source, dest):
     return ["--add-data", f"{source}{os.pathsep}{dest}"]
 
 
-def build_yingxionggu(python):
+def hidden_import_args():
+    args = []
+    for module in ["yingxionggu", "pangpang", "controller"]:
+        args.extend(["--hidden-import", module])
+    return args
+
+
+def build_mfhq(python):
     pyinstaller(
         python,
         "--clean",
         "--onefile",
         "--console",
         "--name",
-        "yingxionggu",
+        "mfhq",
         *add_data_args(PHOTO_DIR, "photo"),
+        *hidden_import_args(),
         "--paths",
         str(SRC_DIR),
-        str(SRC_DIR / "yingxionggu.py"),
+        str(SRC_DIR / "app.py"),
     )
-    print(f"SUCCESS: {DIST_DIR / 'yingxionggu.exe'}")
-
-
-def build_controller(python):
-    pyinstaller(
-        python,
-        "--clean",
-        "--onefile",
-        "--noconsole",
-        "--name",
-        "controller",
-        "--paths",
-        str(SRC_DIR),
-        str(SRC_DIR / "controller.py"),
-    )
-    print(f"SUCCESS: {DIST_DIR / 'controller.exe'}")
+    print(f"SUCCESS: {DIST_DIR / 'mfhq.exe'}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Build MFHQ Windows executables.")
-    parser.add_argument("target", choices=["all", "yingxionggu", "controller"], nargs="?", default="all")
-    args = parser.parse_args()
+    parser = argparse.ArgumentParser(description="Build MFHQ Windows executable.")
+    parser.add_argument("target", choices=["all", "mfhq"], nargs="?", default="all")
+    parser.parse_args()
 
-    if not (SRC_DIR / "yingxionggu.py").exists():
-        raise SystemExit("ERROR: src/yingxionggu.py not found. Run this from the project folder.")
-    if not (SRC_DIR / "controller.py").exists():
-        raise SystemExit("ERROR: src/controller.py not found. Run this from the project folder.")
+    if not (SRC_DIR / "app.py").exists():
+        raise SystemExit("ERROR: src/app.py not found. Run this from the project folder.")
 
     python = ensure_venv()
     install_dependencies(python)
-
-    if args.target in {"all", "yingxionggu"}:
-        build_yingxionggu(python)
-    if args.target in {"all", "controller"}:
-        build_controller(python)
+    build_mfhq(python)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,14 @@
-# Shared config for yingxionggu script and the controller.
+# Shared config for scripts and the controller.
 # Monday=0 ... Sunday=6
 ACTIVE_WEEKDAYS = {4, 5, 6}
 START_HOUR = 10
 STOP_HOUR = 22
 CHECK_INTERVAL_SECONDS = 30
 
-SCRIPT_EXE_NAME = "yingxionggu.exe"
-SCRIPT_EXE_ENV = "MFHQ_SCRIPT_EXE"
+APP_EXE_NAME = "mfhq.exe"
+APP_EXE_ENV = "MFHQ_APP_EXE"
+SCHEDULED_SCRIPT = "yingxionggu"
+SCRIPT_PID_FILE = "yingxionggu.pid"
 
 MOFA_HAQI_PROCESS_NAMES = [
     "paraengineclient.exe",

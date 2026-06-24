@@ -17,13 +17,11 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Build executables
+      - name: Build executable
         run: python scripts\build.py all
 
-      - name: Upload executables
+      - name: Upload executable
         uses: actions/upload-artifact@v4
         with:
           name: mfhq-windows-exe
-          path: |
-            dist\yingxionggu.exe
-            dist\controller.exe
+          path: dist\mfhq.exe
