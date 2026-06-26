@@ -731,7 +731,7 @@ def run_ce_double_patch(scan_value, write_value):
                 break
 
     if ce_dir is None or ce_exe is None:
-        print('Cheat Engine not found. Put it in src/common/resources or set {}'.format(config.CE_DIR_ENV))
+        log('Cheat Engine not found. Put it in src/common/resources or set {}'.format(config.CE_DIR_ENV))
         return False
 
     close_cheat_engine()
