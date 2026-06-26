@@ -708,8 +708,8 @@ def run_ce_double_patch(scan_value, write_value):
     ce_dir = None
     ce_exe = None
     ce_exe_names = [
-        'Cheat Engine.exe',
         'cheatengine-x86_64.exe',
+        'Cheat Engine.exe',
         'cheatengine-i386.exe',
     ]
 
@@ -735,6 +735,13 @@ def run_ce_double_patch(scan_value, write_value):
         return False
 
     close_cheat_engine()
+    python_log_path = os.path.join(runtime_dir(), 'mfhq_ce_patch.log')
+    try:
+        with open(python_log_path, 'a', encoding='utf-8') as f:
+            f.write(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] preparing CE patch with {ce_exe}\n")
+    except Exception:
+        pass
+
     autorun_dir = os.path.join(ce_dir, 'autorun')
     os.makedirs(autorun_dir, exist_ok=True)
     for filename in os.listdir(autorun_dir):
@@ -746,9 +753,10 @@ def run_ce_double_patch(scan_value, write_value):
     script_name = f'mfhq_patch_{scan_value}_to_{write_value}.lua'.replace('-', 'neg').replace('.', '_')
     script_path = os.path.join(autorun_dir, script_name)
     lua_script_path = script_path.replace('\\', '\\\\')
-    lua_log_path = os.path.join(runtime_dir(), 'mfhq_ce_patch.log').replace('\\', '\\\\')
+    lua_log_path = python_log_path.replace('\\', '\\\\')
 
     lua_script = """local processName = \"{process_name}\"
+local processKeyword = \"{process_keyword}\"
 local scanValue = \"{scan_value}\"
 local writeValue = {write_value}
 local scriptPath = [[{script_path}]]
@@ -762,13 +770,37 @@ local function log(message)
   end
 end
 
+local function findTargetPid()
+  local okPid, pid = pcall(getProcessIDFromProcessName, processName)
+  if okPid and pid and pid ~= 0 then
+    log("found exact process: " .. processName .. " pid=" .. tostring(pid))
+    return pid
+  end
+
+  local list = createStringlist()
+  getProcesslist(list)
+  local keyword = string.lower(processKeyword)
+  for i = 0, list.Count - 1 do
+    local entry = list[i]
+    if entry and string.find(string.lower(entry), keyword, 1, true) then
+      local hexPid = string.sub(entry, 1, 8)
+      local matchedPid = tonumber(hexPid, 16)
+      list.destroy()
+      log("found keyword process: " .. entry .. " pid=" .. tostring(matchedPid))
+      return matchedPid
+    end
+  end
+  list.destroy()
+  return nil
+end
+
 local function runPatch()
   log("patch script started")
   local ok, err = pcall(function()
     local opened = false
     for i = 1, 10 do
-      local okPid, pid = pcall(getProcessIDFromProcessName, processName)
-      if okPid and pid and pid ~= 0 then
+      local pid = findTargetPid()
+      if pid and pid ~= 0 then
         openProcess(pid)
         opened = true
         break
@@ -777,7 +809,7 @@ local function runPatch()
     end
 
     if not opened then
-      log("failed to open process: " .. processName)
+      log("failed to open process by keyword: " .. processKeyword)
       return
     end
 
@@ -828,6 +860,7 @@ end
 timer.Enabled = true
 """.format(
         process_name=config.CE_TARGET_PROCESS,
+        process_keyword='paraengineclient',
         scan_value=scan_value,
         write_value=write_value,
         script_path=lua_script_path,
@@ -836,6 +869,11 @@ timer.Enabled = true
 
     with open(script_path, 'w', encoding='utf-8') as f:
         f.write(lua_script)
+    try:
+        with open(python_log_path, 'a', encoding='utf-8') as f:
+            f.write(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] wrote CE autorun script: {script_path}\n")
+    except Exception:
+        pass
     process = subprocess.Popen([ce_exe], cwd=ce_dir)
     write_ce_pid(process.pid, ce_exe)
     return True
