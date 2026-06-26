@@ -321,9 +321,24 @@ def click_right(position):
         pyautogui.mouseUp(button='right')
 
 
+def read_template_image(image_path):
+    template = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+    if template is None:
+        if image_path not in _missing_image_logs:
+            log(f'template image not found or unreadable: {image_path}')
+            _missing_image_logs.add(image_path)
+        return None
+    if len(template.shape) == 2:
+        return cv2.cvtColor(template, cv2.COLOR_GRAY2BGR)
+    if template.shape[2] == 4:
+        return cv2.cvtColor(template, cv2.COLOR_BGRA2BGR)
+    return template
+
 
 def find_img_within_region(base_image_path, target_image_path):
-    base_image = cv2.imread(base_image_path, cv2.IMREAD_UNCHANGED)
+    base_image = read_template_image(base_image_path)
+    if base_image is None:
+        return None
     screenshot = pyautogui.screenshot()
     screenshot_cv = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
     result = cv2.matchTemplate(screenshot_cv, base_image, cv2.TM_CCOEFF_NORMED)
@@ -333,7 +348,9 @@ def find_img_within_region(base_image_path, target_image_path):
         base_image_x = max_loc[0]
         base_image_region = screenshot.crop((base_image_x, base_image_y, base_image_x + base_image.shape[1], base_image_y + base_image.shape[0]))
         base_image_region_cv = cv2.cvtColor(np.array(base_image_region), cv2.COLOR_RGB2BGR)
-        target_image = cv2.imread(target_image_path, cv2.IMREAD_UNCHANGED)
+        target_image = read_template_image(target_image_path)
+        if target_image is None:
+            return None
         result_within_region = cv2.matchTemplate(base_image_region_cv, target_image, cv2.TM_CCOEFF_NORMED)
         (min_val_within_region, max_val_within_region, min_loc_within_region, max_loc_within_region) = cv2.minMaxLoc(result_within_region)
         if max_val_within_region > 0.8:
@@ -383,7 +400,9 @@ def right_click_drag(x_distance):
 def find_img(image_path, threshold=0.8):
     screenshot = pyautogui.screenshot()
     screenshot = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
-    template = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+    template = read_template_image(image_path)
+    if template is None:
+        return None
     result = cv2.matchTemplate(screenshot, template, cv2.TM_CCOEFF_NORMED)
     (_, max_val, _, max_loc) = cv2.minMaxLoc(result)
     if max_val > threshold:
