@@ -3,6 +3,7 @@
 
 import ctypes
 import datetime
+import json
 import os
 import random
 import subprocess
@@ -31,6 +32,107 @@ def log(message):
             f.write(text + '\n')
     except Exception:
         pass
+
+
+def runtime_dir():
+    return os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.getcwd()
+
+
+def ce_pid_file():
+    return os.path.join(runtime_dir(), config.CE_PID_FILE)
+
+
+def write_ce_pid(pid, exe_path):
+    try:
+        with open(ce_pid_file(), 'w', encoding='utf-8') as f:
+            json.dump({'pid': pid, 'exe_path': os.path.abspath(exe_path)}, f)
+    except Exception as e:
+        log(f'write ce pid failed: {e}')
+
+
+def read_ce_process_info():
+    try:
+        with open(ce_pid_file(), 'r', encoding='utf-8') as f:
+            text = f.read().strip()
+        try:
+            data = json.loads(text)
+            return int(data.get('pid')), os.path.abspath(data.get('exe_path', ''))
+        except Exception:
+            return int(text), ''
+    except Exception:
+        return None, ''
+
+
+def read_ce_pid():
+    pid, _ = read_ce_process_info()
+    return pid
+
+
+def clear_ce_pid():
+    try:
+        os.remove(ce_pid_file())
+    except FileNotFoundError:
+        pass
+    except Exception:
+        pass
+
+
+def is_pid_running(pid):
+    if not pid:
+        return False
+    try:
+        output = subprocess.check_output(
+            ['tasklist', '/FI', f'PID eq {pid}', '/FO', 'CSV', '/NH'],
+            text=True,
+            errors='ignore',
+            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0),
+        )
+    except Exception:
+        return False
+    return str(pid) in output
+
+
+def get_process_exe_path(pid):
+    if not pid:
+        return ''
+    try:
+        output = subprocess.check_output(
+            ['wmic', 'process', 'where', f'ProcessId={pid}', 'get', 'ExecutablePath', '/value'],
+            text=True,
+            errors='ignore',
+            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0),
+        )
+    except Exception:
+        return ''
+    for line in output.splitlines():
+        if line.lower().startswith('executablepath='):
+            return os.path.abspath(line.split('=', 1)[1].strip())
+    return ''
+
+
+def close_cheat_engine():
+    pid, expected_exe = read_ce_process_info()
+    if not is_pid_running(pid):
+        clear_ce_pid()
+        return False
+    if not expected_exe:
+        log(f'skip closing Cheat Engine pid={pid}: missing recorded exe path')
+        return False
+    current_exe = get_process_exe_path(pid)
+    if os.path.normcase(current_exe) != os.path.normcase(expected_exe):
+        log(f'skip closing Cheat Engine pid={pid}: exe path mismatch')
+        clear_ce_pid()
+        return False
+
+    subprocess.run(
+        ['taskkill', '/F', '/T', '/PID', str(pid)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0),
+    )
+    clear_ce_pid()
+    log(f'closed Cheat Engine pid={pid}')
+    return True
 
 def turn_half():
     press_with_correction('a', 1.175)
@@ -579,17 +681,41 @@ def login_mofa_haqi(timeout=120):
 
 
 def run_ce_double_patch(scan_value, write_value):
-    ce_dir = os.path.abspath(config.CE_DIR)
-    ce_exe_candidates = [
-        os.path.join(ce_dir, 'Cheat Engine.exe'),
-        os.path.join(ce_dir, 'cheatengine-x86_64.exe'),
-        os.path.join(ce_dir, 'cheatengine-i386.exe'),
+    ce_candidates = [
+        os.environ.get(config.CE_DIR_ENV),
+        get_file_path(config.CE_BUNDLED_DIR),
+        config.CE_DIR,
     ]
-    ce_exe = next((path for path in ce_exe_candidates if os.path.exists(path)), None)
-    if ce_exe is None:
-        print(f'Cheat Engine not found: {ce_dir}')
+    ce_dir = None
+    ce_exe = None
+    ce_exe_names = [
+        'Cheat Engine.exe',
+        'cheatengine-x86_64.exe',
+        'cheatengine-i386.exe',
+    ]
+
+    for candidate in ce_candidates:
+        if not candidate:
+            continue
+        candidate = os.path.abspath(candidate)
+        if os.path.isfile(candidate):
+            ce_dir = os.path.dirname(candidate)
+            ce_exe = candidate
+            break
+        if os.path.isdir(candidate):
+            ce_dir = candidate
+            ce_exe = next((os.path.join(ce_dir, name) for name in ce_exe_names if os.path.exists(os.path.join(ce_dir, name))), None)
+            if ce_exe is None:
+                exe_files = [os.path.join(ce_dir, name) for name in os.listdir(ce_dir) if name.lower().endswith('.exe')]
+                ce_exe = exe_files[0] if len(exe_files) == 1 else None
+            if ce_exe is not None:
+                break
+
+    if ce_dir is None or ce_exe is None:
+        print('Cheat Engine not found. Put it in src/common/resources or set {}'.format(config.CE_DIR_ENV))
         return False
 
+    close_cheat_engine()
     autorun_dir = os.path.join(ce_dir, 'autorun')
     os.makedirs(autorun_dir, exist_ok=True)
     for filename in os.listdir(autorun_dir):
@@ -650,7 +776,8 @@ pcall(function() os.remove(scriptPath) end)
 
     with open(script_path, 'w', encoding='utf-8') as f:
         f.write(lua_script)
-    subprocess.Popen([ce_exe])
+    process = subprocess.Popen([ce_exe], cwd=ce_dir)
+    write_ce_pid(process.pid, ce_exe)
     return True
 
 def wait_until(target_hour):

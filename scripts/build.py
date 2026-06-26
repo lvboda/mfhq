@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 VENV_DIR = ROOT / ".venv-build"
 SRC_DIR = ROOT / "src"
 PHOTO_DIR = SRC_DIR / "common" / "photo"
+RESOURCES_DIR = SRC_DIR / "common" / "resources"
 DIST_DIR = ROOT / "dist"
 PIP_INDEX = "https://mirrors.cloud.tencent.com/pypi/simple"
 PIP_TRUST_HOST = "mirrors.cloud.tencent.com"
@@ -66,6 +67,10 @@ def hidden_import_args():
 
 
 def build_mfhq(python):
+    data_args = add_data_args(PHOTO_DIR, "photo")
+    if RESOURCES_DIR.exists():
+        data_args.extend(add_data_args(RESOURCES_DIR, "resources"))
+
     pyinstaller(
         python,
         "--clean",
@@ -73,7 +78,7 @@ def build_mfhq(python):
         "--console",
         "--name",
         "mfhq",
-        *add_data_args(PHOTO_DIR, "photo"),
+        *data_args,
         *hidden_import_args(),
         "--paths",
         str(SRC_DIR),

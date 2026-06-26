@@ -19,4 +19,7 @@ MOFA_HAQI_PATH_ENV = "MFHQ_GAME_PATH"
 MOFA_HAQI_WINDOW_KEYS = ["魔法哈奇", "哈奇", "paraengine"]
 
 CE_DIR = r"C:\Users\Cheat Engine 6.5 (1)\Cheat Engine 6.5"
+CE_DIR_ENV = "MFHQ_CE_DIR"
+CE_BUNDLED_DIR = "resources/Cheat Engine 6.5"
 CE_TARGET_PROCESS = "paraengineclient.exe"
+CE_PID_FILE = "cheat_engine.pid"

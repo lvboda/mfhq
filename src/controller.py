@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 import subprocess
 import sys
@@ -37,6 +38,10 @@ def pid_file():
     return app_dir() / config.SCRIPT_PID_FILE
 
 
+def ce_pid_file():
+    return app_dir() / config.CE_PID_FILE
+
+
 def read_pid():
     try:
         return int(pid_file().read_text(encoding="utf-8").strip())
@@ -54,6 +59,30 @@ def write_pid(pid):
 def clear_pid():
     try:
         pid_file().unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+def read_ce_process_info():
+    try:
+        text = ce_pid_file().read_text(encoding="utf-8").strip()
+        try:
+            data = json.loads(text)
+            return int(data.get("pid")), str(Path(data.get("exe_path", "")).resolve())
+        except Exception:
+            return int(text), ""
+    except Exception:
+        return None, ""
+
+
+def read_ce_pid():
+    pid, _ = read_ce_process_info()
+    return pid
+
+
+def clear_ce_pid():
+    try:
+        ce_pid_file().unlink(missing_ok=True)
     except Exception:
         pass
 
@@ -78,10 +107,30 @@ def is_pid_running(pid):
     return str(pid) in output
 
 
+def get_process_exe_path(pid):
+    if not pid:
+        return ""
+    try:
+        output = subprocess.check_output(
+            ["wmic", "process", "where", f"ProcessId={pid}", "get", "ExecutablePath", "/value"],
+            text=True,
+            errors="ignore",
+            creationflags=creation_flags(),
+        )
+    except Exception:
+        return ""
+    for line in output.splitlines():
+        if line.lower().startswith("executablepath="):
+            return str(Path(line.split("=", 1)[1].strip()).resolve())
+    return ""
+
+
 def start_script():
     pid = read_pid()
     if is_pid_running(pid):
         return
+    if pid:
+        stop_cheat_engine()
     clear_pid()
 
     cmd = script_command()
@@ -98,6 +147,7 @@ def start_script():
 def stop_script():
     pid = read_pid()
     if not is_pid_running(pid):
+        stop_cheat_engine()
         clear_pid()
         return
 
@@ -107,8 +157,33 @@ def stop_script():
         stderr=subprocess.DEVNULL,
         creationflags=creation_flags(),
     )
+    stop_cheat_engine()
     clear_pid()
     log(f"stopped pid={pid}")
+
+
+def stop_cheat_engine():
+    pid, expected_exe = read_ce_process_info()
+    if not is_pid_running(pid):
+        clear_ce_pid()
+        return
+    if not expected_exe:
+        log(f"skip stopping Cheat Engine pid={pid}: missing recorded exe path")
+        return
+    current_exe = get_process_exe_path(pid)
+    if os.path.normcase(current_exe) != os.path.normcase(expected_exe):
+        clear_ce_pid()
+        log(f"skip stopping Cheat Engine pid={pid}: exe path mismatch")
+        return
+
+    subprocess.run(
+        ["taskkill", "/F", "/T", "/PID", str(pid)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        creationflags=creation_flags(),
+    )
+    clear_ce_pid()
+    log(f"stopped Cheat Engine pid={pid}")
 
 
 def log(message):

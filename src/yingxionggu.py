@@ -1,7 +1,18 @@
+import atexit
+import signal
 import threading
 import time
 
 from common import const, tool
+
+
+def cleanup(*_):
+    tool.close_cheat_engine()
+
+
+def exit_with_cleanup(signum, _frame):
+    cleanup()
+    raise SystemExit(128 + signum)
 
 
 def start():
@@ -9,6 +20,11 @@ def start():
     tool.find_and_click(const.yingxionggu)
     tool.find_and_click(const.jiaruyingxionggu)
     time.sleep(2)
+
+    if tool.find_img(const.yingxionggu10ci) is not None:
+        tool.find_and_click(const.shi)
+        tool.run_ce_double_patch(50417, -1)
+        return
 
     if tool.find_img(const.shi) is not None:
         tool.find_and_click(const.fou)
@@ -30,15 +46,23 @@ def start():
 
 
 def main():
+    atexit.register(cleanup)
+    for signum in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(signum, exit_with_cleanup)
+
     if not tool.is_mofa_haqi_running():
         tool.start_mofa_haqi()
         tool.login_mofa_haqi()
 
     thread = threading.Thread(target=tool.beibao100s)
+    thread.daemon = True
     thread.start()
-    while True:
-        start()
-        time.sleep(2)
+    try:
+        while True:
+            start()
+            time.sleep(2)
+    finally:
+        cleanup()
 
 
 if __name__ == '__main__':

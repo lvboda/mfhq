@@ -10,6 +10,7 @@ This project uses a simple `src` layout: shared modules stay in `src/common`, ex
   - `const.py`: shared image path constants.
   - `config.py`: shared runtime/build config.
   - `photo/`: shared image templates.
+  - `resources/`: optional bundled external resources, including Cheat Engine.
 - `src/yingxionggu.py`: yingxionggu script.
 - `src/pangpang.py`: pangpang card-clicker script.
 - `src/controller.py`: resident scheduler/controller script.
@@ -35,3 +36,13 @@ mfhq.exe controller
 ```
 
 The controller starts and stops `mfhq.exe yingxionggu` by PID according to the schedule in `src/common/config.py`.
+
+## Bundled Cheat Engine
+
+`run_ce_double_patch` looks for Cheat Engine in this order:
+
+1. `MFHQ_CE_DIR` environment variable, pointing to a CE folder or exe.
+2. Bundled `src/common/resources/Cheat Engine 6.5` files, packaged into `mfhq.exe` when the resources folder exists.
+3. The fallback local path in `src/common/config.py`.
+
+To bundle CE, put `Cheat Engine.exe` or the full CE folder under `src/common/resources/Cheat Engine 6.5/`, then rebuild with `scripts\build.cmd`.
