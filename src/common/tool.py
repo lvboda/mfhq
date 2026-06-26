@@ -746,51 +746,92 @@ def run_ce_double_patch(scan_value, write_value):
     script_name = f'mfhq_patch_{scan_value}_to_{write_value}.lua'.replace('-', 'neg').replace('.', '_')
     script_path = os.path.join(autorun_dir, script_name)
     lua_script_path = script_path.replace('\\', '\\\\')
+    lua_log_path = os.path.join(runtime_dir(), 'mfhq_ce_patch.log').replace('\\', '\\\\')
 
     lua_script = """local processName = \"{process_name}\"
 local scanValue = \"{scan_value}\"
 local writeValue = {write_value}
 local scriptPath = [[{script_path}]]
+local logPath = [[{log_path}]]
 
-local ok, err = pcall(function()
-  openProcess(processName)
-
-  local ms = createMemScan()
-  ms.firstScan(
-    soExactValue,
-    vtDouble,
-    rtRounded,
-    scanValue,
-    \"\",
-    \"00000000\",
-    \"7fffffff\",
-    \"\",
-    fsmNotAligned,
-    \"\",
-    false,
-    false,
-    false,
-    false
-  )
-  ms.waitTillDone()
-
-  local fl = createFoundList(ms)
-  fl.initialize()
-
-  for i = 0, fl.Count - 1 do
-    writeDouble(fl.Address[i], writeValue)
+local function log(message)
+  local f = io.open(logPath, "a")
+  if f then
+    f:write(os.date("[%Y-%m-%d %H:%M:%S] ") .. message .. "\\n")
+    f:close()
   end
+end
 
-  fl.destroy()
-  ms.destroy()
-end)
+local function runPatch()
+  log("patch script started")
+  local ok, err = pcall(function()
+    local opened = false
+    for i = 1, 10 do
+      local okPid, pid = pcall(getProcessIDFromProcessName, processName)
+      if okPid and pid and pid ~= 0 then
+        openProcess(pid)
+        opened = true
+        break
+      end
+      sleep(1000)
+    end
 
-pcall(function() os.remove(scriptPath) end)
+    if not opened then
+      log("failed to open process: " .. processName)
+      return
+    end
+
+    local ms = createMemScan()
+    ms.firstScan(
+      soExactValue,
+      vtDouble,
+      rtRounded,
+      scanValue,
+      \"\",
+      \"00000000\",
+      \"7fffffff\",
+      \"\",
+      fsmNotAligned,
+      \"\",
+      false,
+      false,
+      false,
+      false
+    )
+    ms.waitTillDone()
+
+    local fl = createFoundList(ms)
+    fl.initialize()
+
+    local count = tonumber(fl.Count) or 0
+    for i = 0, count - 1 do
+      writeDouble(fl.Address[i], writeValue)
+    end
+
+    log("patched " .. count .. " address(es): " .. scanValue .. " -> " .. tostring(writeValue))
+    fl.destroy()
+    ms.destroy()
+  end)
+
+  if not ok then
+    log("patch error: " .. tostring(err))
+  end
+  pcall(function() os.remove(scriptPath) end)
+end
+
+local timer = createTimer(nil, false)
+timer.Interval = 3000
+timer.OnTimer = function(t)
+  t.destroy()
+  runPatch()
+end
+timer.Enabled = true
 """.format(
         process_name=config.CE_TARGET_PROCESS,
         scan_value=scan_value,
         write_value=write_value,
         script_path=lua_script_path,
+        log_path=lua_log_path,
     )
 
     with open(script_path, 'w', encoding='utf-8') as f:

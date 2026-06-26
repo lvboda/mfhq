@@ -22,7 +22,7 @@ def start():
     time.sleep(2)
 
     if tool.find_img(const.yingxionggu10ci) is not None:
-        tool.find_and_click(const.shi)
+        tool.find_and_click(const.queding)
         tool.run_ce_double_patch(50417, -1)
         return
 
