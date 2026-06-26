@@ -750,7 +750,7 @@ def run_ce_double_patch(scan_value, write_value):
                 os.remove(os.path.join(autorun_dir, filename))
             except OSError:
                 pass
-    script_name = f'mfhq_patch_{scan_value}_to_{write_value}.lua'.replace('-', 'neg').replace('.', '_')
+    script_name = f"mfhq_patch_{str(scan_value).replace('-', 'neg').replace('.', '_')}_to_{str(write_value).replace('-', 'neg').replace('.', '_')}.lua"
     script_path = os.path.join(autorun_dir, script_name)
     lua_script_path = script_path.replace('\\', '\\\\')
     lua_log_path = python_log_path.replace('\\', '\\\\')
