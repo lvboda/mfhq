@@ -6,6 +6,8 @@ import time
 from common import const, tool
 
 round_count = 0
+ce_patch_attempts = 0
+MAX_CE_PATCH_ATTEMPTS = 2
 
 
 def cleanup(*_):
@@ -19,6 +21,8 @@ def exit_with_cleanup(signum, _frame):
 
 
 def start(round_no):
+    global ce_patch_attempts
+
     tool.log(f"第 {round_no} 轮开始")
     tool.wait_img_appear(const.ditu)
     tool.find_and_click(const.yingxionggu)
@@ -26,9 +30,13 @@ def start(round_no):
     time.sleep(2)
 
     if tool.find_img(const.yingxionggu10ci) is not None:
-        tool.log(f"第 {round_no} 轮：检测到 10 次提示，启动 CE 修改")
         tool.find_and_click(const.queding)
-        tool.run_ce_double_patch(50417, -1)
+        if ce_patch_attempts < MAX_CE_PATCH_ATTEMPTS:
+            ce_patch_attempts += 1
+            tool.log(f"第 {round_no} 轮：检测到 10 次提示，第 {ce_patch_attempts} 次启动 CE 修改")
+            tool.run_ce_double_patch(50417, -1)
+        else:
+            tool.log(f"第 {round_no} 轮：检测到 10 次提示，CE 修改已达最大尝试次数")
         time.sleep(10)
         return
 
