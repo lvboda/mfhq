@@ -20,6 +20,18 @@ def exit_with_cleanup(signum, _frame):
     raise SystemExit(128 + signum)
 
 
+def run_arena_bag_guard(callback):
+    stop_event = threading.Event()
+    thread = threading.Thread(target=tool.beibao100s, args=(stop_event,))
+    thread.daemon = True
+    thread.start()
+    try:
+        return callback()
+    finally:
+        stop_event.set()
+        thread.join(timeout=2)
+
+
 def start(round_no):
     global ce_patch_attempts
 
@@ -55,7 +67,7 @@ def start(round_no):
             tool.press_with_correction('b', 0.5)
         return
 
-    tool.wait_img_appear(const.saichangchengji, 0)
+    run_arena_bag_guard(lambda: tool.wait_img_appear(const.saichangchengji, 0))
     tool.find_and_click(const.fanhuizhucheng)
     tool.find_and_click(const.shi)
     tool.log(f"第 {round_no} 轮完成")
@@ -72,9 +84,6 @@ def main():
         tool.start_mofa_haqi()
         tool.login_mofa_haqi()
 
-    thread = threading.Thread(target=tool.beibao100s)
-    thread.daemon = True
-    thread.start()
     try:
         while True:
             global round_count

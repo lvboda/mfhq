@@ -1016,17 +1016,24 @@ def yiqiganxiaoguai(hand1, hand2, hand3):
         find_and_click(daliyuan)
 
 
-def beibao100s():
+def beibao100s(stop_event=None):
     from common import const
-    while True:
+    while stop_event is None or not stop_event.is_set():
         if find_img(const.ditu) is not None:
             press_with_correction('b', 0.5)
-            time.sleep(0.5)
+            if stop_event is not None and stop_event.wait(0.5):
+                break
             if find_img(const.zhuangbei) is not None:
                 press_with_correction('b', 0.5)
-            time.sleep(100)
+            if stop_event is not None:
+                stop_event.wait(100)
+            else:
+                time.sleep(100)
         else:
-            time.sleep(10)
+            if stop_event is not None:
+                stop_event.wait(10)
+            else:
+                time.sleep(10)
 
 if __name__ == '__main__':
     time.sleep(2)
