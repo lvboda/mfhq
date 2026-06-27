@@ -34,9 +34,18 @@ dist\\resources\\
 mfhq.exe yingxionggu
 mfhq.exe pangpang
 mfhq.exe controller
+mfhq.exe yingxionggu -c
 ```
 
+Running `mfhq.exe` without arguments opens an interactive prompt. You can then type a script
+name such as `controller` or `controller -c`.
+
 The controller starts and stops `mfhq.exe yingxionggu` by PID according to the schedule in `src/common/config.py`.
+
+Use `-c` / `--console` on Windows Server to run `tscon <current-session-id> /dest:console`
+before starting the selected script. This detaches the current RDP session while keeping the
+interactive desktop available for screenshot/mouse automation. Run as Administrator if `tscon`
+fails.
 
 ## External Cheat Engine
 
