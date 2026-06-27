@@ -36,6 +36,7 @@ def start(round_no):
     global ce_patch_attempts
 
     tool.log(f"第 {round_no} 轮开始")
+    tool.focus_mofa_haqi_window()
     tool.wait_img_appear(const.ditu)
     tool.find_and_click(const.yingxionggu)
     tool.find_and_click(const.jiaruyingxionggu)
@@ -47,6 +48,8 @@ def start(round_no):
             ce_patch_attempts += 1
             tool.log(f"第 {round_no} 轮：检测到 10 次提示，第 {ce_patch_attempts} 次启动 CE 修改")
             tool.run_ce_double_patch(50417, -1)
+            time.sleep(1)
+            tool.focus_mofa_haqi_window()
         else:
             tool.log(f"第 {round_no} 轮：检测到 10 次提示，CE 修改已达最大尝试次数")
         time.sleep(10)
