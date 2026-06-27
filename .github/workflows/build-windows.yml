@@ -24,4 +24,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mfhq-windows-exe
-          path: dist\mfhq.exe
+          path: |
+            dist\mfhq.exe
+            dist\resources\**

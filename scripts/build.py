@@ -1,5 +1,6 @@
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -68,8 +69,6 @@ def hidden_import_args():
 
 def build_mfhq(python):
     data_args = add_data_args(PHOTO_DIR, "photo")
-    if RESOURCES_DIR.exists():
-        data_args.extend(add_data_args(RESOURCES_DIR, "resources"))
 
     pyinstaller(
         python,
@@ -84,7 +83,18 @@ def build_mfhq(python):
         str(SRC_DIR),
         str(SRC_DIR / "app.py"),
     )
+    copy_external_resources()
     print(f"SUCCESS: {DIST_DIR / 'mfhq.exe'}")
+
+
+def copy_external_resources():
+    if not RESOURCES_DIR.exists():
+        return
+    target = DIST_DIR / "resources"
+    if target.exists():
+        shutil.rmtree(target)
+    shutil.copytree(RESOURCES_DIR, target)
+    print(f"SUCCESS: {target}")
 
 
 def main():

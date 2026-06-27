@@ -616,7 +616,16 @@ def asyncDoSomeThing(callback, *args, **kwargs):
 def get_file_path(path):
     base_path = getattr(sys, '_MEIPASS', None)
     if base_path:
-        return os.path.join(base_path, path)
+        exe_dir = os.path.dirname(sys.executable)
+        candidates = [
+            os.path.join(exe_dir, path),
+            os.path.join(os.getcwd(), path),
+            os.path.join(base_path, path),
+        ]
+        for image_path in candidates:
+            if os.path.exists(image_path):
+                return os.path.abspath(image_path)
+        return os.path.abspath(candidates[0])
 
     candidates = [
         os.path.join(os.getcwd(), path),
