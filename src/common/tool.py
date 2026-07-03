@@ -12,6 +12,7 @@ import cv2
 import pyautogui
 import win32con
 import win32gui
+import win32process
 from playsound import playsound
 from pynput.keyboard import Controller, Key
 import numpy as np
@@ -21,6 +22,8 @@ from common import config
 keyboard = Controller()
 user32 = ctypes.windll.user32
 _missing_image_logs = set()
+_active_region = None
+_active_region_name = None
 
 
 def log(message):
@@ -32,6 +35,53 @@ def log(message):
             f.write(text + '\n')
     except Exception:
         pass
+
+
+def set_active_region(region=None, name=None):
+    global _active_region, _active_region_name
+    _active_region = tuple(region) if region else None
+    _active_region_name = name
+
+
+def get_active_region():
+    return _active_region
+
+
+def get_active_region_name():
+    return _active_region_name
+
+
+def get_active_region_center():
+    if _active_region is None:
+        (screen_width, screen_height) = pyautogui.size()
+        return (screen_width // 2, screen_height // 2)
+    x, y, w, h = _active_region
+    return (x + w // 2, y + h // 2)
+
+
+def get_active_region_window_pid():
+    try:
+        hwnd = win32gui.WindowFromPoint(get_active_region_center())
+        _, pid = win32process.GetWindowThreadProcessId(hwnd)
+        return pid
+    except Exception:
+        return None
+
+
+def active_screenshot():
+    if _active_region is None:
+        screenshot = pyautogui.screenshot()
+        return screenshot, (0, 0)
+    x, y, w, h = _active_region
+    screenshot = pyautogui.screenshot(region=(x, y, w, h))
+    return screenshot, (x, y)
+
+
+def mouse_rest_position():
+    if _active_region is None:
+        return (200, 200)
+    x, y, w, h = _active_region
+    return (x + min(200, max(10, w - 10)), y + min(200, max(10, h - 10)))
 
 
 def runtime_dir():
@@ -339,7 +389,8 @@ def find_img_within_region(base_image_path, target_image_path):
     base_image = read_template_image(base_image_path)
     if base_image is None:
         return None
-    screenshot = pyautogui.screenshot()
+    screenshot, offset = active_screenshot()
+    offset_x, offset_y = offset
     screenshot_cv = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
     result = cv2.matchTemplate(screenshot_cv, base_image, cv2.TM_CCOEFF_NORMED)
     (min_val, max_val, min_loc, max_loc) = cv2.minMaxLoc(result)
@@ -356,8 +407,8 @@ def find_img_within_region(base_image_path, target_image_path):
         if max_val_within_region > 0.8:
             target_height = target_image.shape[0]
             target_width = target_image.shape[1]
-            target_x = base_image_x + max_loc_within_region[0] + target_width // 2
-            target_y = base_image_y + max_loc_within_region[1] + target_height // 2
+            target_x = offset_x + base_image_x + max_loc_within_region[0] + target_width // 2
+            target_y = offset_y + base_image_y + max_loc_within_region[1] + target_height // 2
             return (target_x, target_y)
 
 
@@ -398,7 +449,8 @@ def right_click_drag(x_distance):
 
 
 def find_img(image_path, threshold=0.8):
-    screenshot = pyautogui.screenshot()
+    screenshot, offset = active_screenshot()
+    offset_x, offset_y = offset
     screenshot = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
     template = read_template_image(image_path)
     if template is None:
@@ -406,8 +458,8 @@ def find_img(image_path, threshold=0.8):
     result = cv2.matchTemplate(screenshot, template, cv2.TM_CCOEFF_NORMED)
     (_, max_val, _, max_loc) = cv2.minMaxLoc(result)
     if max_val > threshold:
-        center_x = max_loc[0] + template.shape[1] // 2
-        center_y = max_loc[1] + template.shape[0] // 2
+        center_x = offset_x + max_loc[0] + template.shape[1] // 2
+        center_y = offset_y + max_loc[1] + template.shape[0] // 2
         return (center_x, center_y)
 
 
@@ -439,7 +491,7 @@ def find_and_click_r(image_path, duration=40):
             print('卡片{}没有找到'.format(image_path))
             return False
     click_right(position)
-    pyautogui.moveTo(200, 200, duration=0.2)
+    pyautogui.moveTo(*mouse_rest_position(), duration=0.2)
     return True
 
 
@@ -454,7 +506,7 @@ def find_and_click(image_path, duration=40):
             print('卡片{}没有找到'.format(image_path))
             return False
     click(position)
-    pyautogui.moveTo(200, 200, duration=0.2)
+    pyautogui.moveTo(*mouse_rest_position(), duration=0.2)
     return True
 
 
@@ -708,7 +760,7 @@ def login_mofa_haqi(timeout=120):
     return False
 
 
-def run_ce_double_patch(scan_value, write_value):
+def run_ce_double_patch(scan_value, write_value, target_pid=None):
     ce_candidates = [
         os.environ.get(config.CE_DIR_ENV),
         get_file_path(config.CE_BUNDLED_DIR),
@@ -747,7 +799,7 @@ def run_ce_double_patch(scan_value, write_value):
     python_log_path = os.path.join(runtime_dir(), 'mfhq_ce_patch.log')
     try:
         with open(python_log_path, 'a', encoding='utf-8') as f:
-            f.write(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] preparing CE patch with {ce_exe}\n")
+            f.write(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] preparing CE patch with {ce_exe}, target_pid={target_pid or ''}\n")
     except Exception:
         pass
 
@@ -766,6 +818,7 @@ def run_ce_double_patch(scan_value, write_value):
 
     lua_script = """local processName = \"{process_name}\"
 local processKeyword = \"{process_keyword}\"
+local targetPid = {target_pid}
 local scanValue = \"{scan_value}\"
 local writeValue = {write_value}
 local scriptPath = [[{script_path}]]
@@ -780,6 +833,11 @@ local function log(message)
 end
 
 local function findTargetPid()
+  if targetPid and targetPid ~= 0 then
+    log("using target pid=" .. tostring(targetPid))
+    return targetPid
+  end
+
   local okPid, pid = pcall(getProcessIDFromProcessName, processName)
   if okPid and pid and pid ~= 0 then
     log("found exact process: " .. processName .. " pid=" .. tostring(pid))
@@ -870,6 +928,7 @@ timer.Enabled = true
 """.format(
         process_name=config.CE_TARGET_PROCESS,
         process_keyword='paraengineclient',
+        target_pid=target_pid or 0,
         scan_value=scan_value,
         write_value=write_value,
         script_path=lua_script_path,

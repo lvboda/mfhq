@@ -35,10 +35,19 @@ mfhq.exe yingxionggu
 mfhq.exe pangpang
 mfhq.exe controller
 mfhq.exe yingxionggu -c
+mfhq.exe yingxionggu --screens lt rt
+mfhq.exe yingxionggu --screens 1-2-3-4
+mfhq.exe yingxionggu --show-screens --screens 1 2 3 4
 ```
 
 Running `mfhq.exe` without arguments opens an interactive prompt. You can then type a script
 name such as `controller` or `controller -c`.
+
+For future multi-instance layout work, `yingxionggu` supports four-way screen planning with
+`--screens`. Use it to select quadrants: `lt`, `rt`, `lb`, `rb` (or `1`, `2`, `3`, `4`).
+Space-separated values are supported, as are comma, dash, slash, pipe, and semicolon separators.
+In this mode, image matching is limited to the selected quadrants and click coordinates are offset
+back to the full screen. Use `--show-screens` to print the plan and exit.
 
 The controller starts and stops `mfhq.exe yingxionggu` by PID according to the schedule in `src/common/config.py`.
 
