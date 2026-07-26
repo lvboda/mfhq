@@ -38,16 +38,19 @@ mfhq.exe yingxionggu -c
 mfhq.exe yingxionggu --screens lt rt
 mfhq.exe yingxionggu --screens 1-2-3-4
 mfhq.exe yingxionggu --show-screens --screens 1 2 3 4
+mfhq.exe yingxionggu --show-windows
 ```
 
 Running `mfhq.exe` without arguments opens an interactive prompt. You can then type a script
 name such as `controller` or `controller -c`.
 
-For future multi-instance layout work, `yingxionggu` supports four-way screen planning with
-`--screens`. Use it to select quadrants: `lt`, `rt`, `lb`, `rb` (or `1`, `2`, `3`, `4`).
-Space-separated values are supported, as are comma, dash, slash, pipe, and semicolon separators.
-In this mode, image matching is limited to the selected quadrants and click coordinates are offset
-back to the full screen. Use `--show-screens` to print the plan and exit.
+`yingxionggu` supports multi-instance split-screen mode with `--screens`. Select quadrants using
+`lt`, `rt`, `lb`, `rb` (or `1`, `2`, `3`, `4`). When `--screens` is specified, the script
+automatically starts the required number of game instances, arranges them into the selected
+quadrants, logs in each one, and then runs the arena loop for all regions sequentially.
+
+Use `--show-screens` to print the region plan and exit. Use `--show-windows` to list detected
+game windows and exit.
 
 The controller starts and stops `mfhq.exe yingxionggu` by PID according to the schedule in `src/common/config.py`.
 

@@ -136,136 +136,87 @@ Logs include the region name, for example:
 
 In split-screen mode, `yingxionggu` tries to get the PID of the window at the active region center and passes it into the CE patch. This is meant to reduce the chance of patching the wrong game process when multiple clients exist.
 
-## Current Limitations
+## Multi-Instance Note
 
-This branch is not a complete multi-instance solution yet.
+For 3-4 accounts, the game supports opening multiple instances natively — no special multi-open technique is required. Just launch the game multiple times. A dedicated multi-open approach is only needed for 10+ accounts, which is out of scope for now.
 
-Important limitations:
+### Multi-Instance Startup Flow
 
-- It does not automatically start multiple game clients.
-- It does not automatically arrange game windows into quadrants yet.
-- It does not verify that the window in a region is actually the matching game client.
-- Multiple independently running `mfhq.exe` processes can still compete for mouse/keyboard input.
-- `pyautogui` actions are still system-wide, not true background window messages.
-- The controller still manages a single scheduled script/PID model.
-- CE targeting by region-center PID is only a first step and needs real Windows validation.
+When `--screens` is specified, the startup flow is:
 
-## Remaining Tasks
+1. **Start instances** — `start_mofa_haqi_instances(count)` checks how many game windows already exist. If fewer than the selected screen count, it launches additional instances via `os.startfile()` and waits up to 2 minutes for all windows to appear.
+2. **Arrange windows** — `arrange_game_windows()` uses `win32gui.SetWindowPos()` to move and resize each game window into its assigned screen region. The window size matches the outer window rect (including title bar/borders).
+3. **Login each** — For each region, the script sets the active region, focuses the bound window, and runs the standard login flow. If a window is already logged in (map icon visible), login is skipped.
 
-### 1. Window Discovery
+The window-to-region binding (`RuntimeOptions.window_binding`) maps each screen key to `(hwnd, pid)` and is used throughout the automation loop for:
 
-Add a way to list all current game windows.
+- Focusing the correct window before operating a region.
+- CE patch target PID (uses bound PID instead of the region-center heuristic).
 
-Possible command:
+### Window Discovery
 
 ```cmd
 mfhq.exe yingxionggu --show-windows
 ```
 
-Expected output/log:
+Lists all detected game windows with hwnd, pid, and title:
 
 ```text
 [1] hwnd=123456 pid=8596 title=魔法哈奇
 [2] hwnd=123888 pid=9120 title=魔法哈奇
 ```
 
-### 2. Multi-Client Window Arrangement
+## Current Limitations
 
-This is not implemented yet. The branch can calculate four screen regions, but it does not yet automatically move or resize multiple game clients into those regions.
+- `SetWindowPos()` sets the outer window rect — the actual game client area will be slightly smaller due to title bar and borders.
+- `pyautogui` actions are still system-wide, not true background window messages. Multiple independently running `mfhq.exe` processes can compete for mouse/keyboard input. The single-process sequential orchestrator avoids this.
+- The controller still manages a single scheduled script/PID model.
+- The code has not been validated on Windows with real game windows yet.
 
-Add a flag to arrange detected game windows into selected regions.
+## Remaining Tasks
 
-Possible command:
-
-```cmd
-mfhq.exe yingxionggu --screens 1 2 3 4 --arrange
-```
-
-Expected behavior:
-
-```text
-window 1 -> lt: move/resize to left-top region
-window 2 -> rt: move/resize to right-top region
-window 3 -> lb: move/resize to left-bottom region
-window 4 -> rb: move/resize to right-bottom region
-```
-
-Implementation notes:
-
-- Discover all visible game windows first.
-- Use `win32gui.SetWindowPos()` to move and resize windows.
-- Decide whether the target size should represent the full outer window rect or the game client area.
-- If exact client-area sizing is required, use `GetWindowRect`, `GetClientRect`, and `AdjustWindowRectEx` to account for title bars/borders.
-- Provide a dry-run/log mode so the mapping can be checked before moving windows.
-- Log the mapping from region to hwnd/pid/title.
-- Handle fewer windows than selected regions with a clear warning.
-- Handle more windows than selected regions by ignoring extras unless explicitly requested.
-
-### 3. Window-To-Region Binding
-
-Once windows are arranged, persist or hold a mapping:
-
-```text
-lt -> hwnd/pid A
-rt -> hwnd/pid B
-lb -> hwnd/pid C
-rb -> hwnd/pid D
-```
-
-This mapping should be used for:
-
-- focusing the correct window before operating a region;
-- CE patch target PID;
-- debugging logs.
-
-### 4. Safer Mouse/Keyboard Coordination
+### 1. Safer Mouse/Keyboard Coordination
 
 If multiple script processes are used, they can still fight over the mouse and keyboard.
 
 Possible approaches:
 
-- Use one orchestrator process that runs regions sequentially.
+- Use one orchestrator process that runs regions sequentially (current approach).
 - Add a global lock file/mutex around mouse/keyboard actions.
 - Avoid launching four independent processes until locking exists.
 
-### 5. Controller Multi-Instance Support
+### 2. Controller Multi-Instance Support
 
 The current controller starts/stops one `yingxionggu` process with one PID file.
 
 Future options:
 
 - Keep controller single-instance and run one orchestrator process for all regions.
-- Or extend controller to manage one PID per region:
-
-```text
-yingxionggu_lt.pid
-yingxionggu_rt.pid
-yingxionggu_lb.pid
-yingxionggu_rb.pid
-```
+- Or extend controller to manage one PID per region.
 
 The orchestrator option is probably safer for `pyautogui`.
 
-### 6. Real Windows Validation
+### 3. Real Windows Validation
 
-The current changes were syntax-checked locally, but the region automation must be validated on Windows with real game windows.
+The region automation must be validated on Windows with real game windows.
 
 Test checklist:
 
 ```cmd
+mfhq.exe yingxionggu --show-windows
 mfhq.exe yingxionggu --show-screens --screens 1 2 3 4
 mfhq.exe yingxionggu --screens 1
-mfhq.exe yingxionggu --screens 2
+mfhq.exe yingxionggu --screens 1 2
+mfhq.exe yingxionggu --screens 1 2 3 4
 ```
 
 Things to verify:
 
+- game instances start correctly and windows appear;
+- windows are arranged into the correct quadrants;
+- login flow works for each window;
 - screenshots are restricted to the selected region;
 - clicks land in the correct quadrant;
 - mouse rest position stays inside the selected quadrant;
 - CE patch targets the intended game process;
 - logs are readable and include region names.
-
-## Suggested Next Step
-
-Implement `--show-windows` and `--arrange` first. Those are low-risk and will make it easy to confirm whether multiple game clients can be discovered and placed reliably before changing the main automation loop further.

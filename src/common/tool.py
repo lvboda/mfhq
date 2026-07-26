@@ -714,6 +714,20 @@ def focus_mofa_haqi_window():
             return True
     return False
 
+def find_game_windows():
+    seen = set()
+    result = []
+    for key in config.MOFA_HAQI_WINDOW_KEYS:
+        for hwnd in get_all_windows(key):
+            if hwnd in seen:
+                continue
+            seen.add(hwnd)
+            _, pid = win32process.GetWindowThreadProcessId(hwnd)
+            title = win32gui.GetWindowText(hwnd)
+            result.append((hwnd, pid, title))
+    return result
+
+
 def start_mofa_haqi(game_path=None):
     if is_mofa_haqi_running():
         return True
@@ -736,7 +750,62 @@ def start_mofa_haqi(game_path=None):
     return False
 
 
-def login_mofa_haqi(timeout=120):
+def start_mofa_haqi_instances(count, game_path=None):
+    game_path = game_path or os.environ.get(config.MOFA_HAQI_PATH_ENV) or config.MOFA_HAQI_DEFAULT_PATH
+    if not game_path:
+        log(f'game path not configured, set {config.MOFA_HAQI_PATH_ENV}')
+        return []
+
+    existing = find_game_windows()
+    need = count - len(existing)
+    if need <= 0:
+        log(f"already have {len(existing)} game window(s), need {count}")
+        return [w[0] for w in existing[:count]]
+
+    log(f"starting {need} additional game instance(s)")
+    for i in range(need):
+        try:
+            os.startfile(game_path)
+        except Exception as e:
+            log(f'failed to start instance: {e}')
+        time.sleep(3)
+
+    for _ in range(120):
+        windows = find_game_windows()
+        if len(windows) >= count:
+            log(f"all {count} game window(s) ready")
+            return [w[0] for w in windows[:count]]
+        time.sleep(1)
+
+    windows = find_game_windows()
+    log(f"timeout: found {len(windows)} of {count} requested window(s)")
+    return [w[0] for w in windows]
+
+
+def resize_move_window(hwnd, x, y, w, h):
+    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+    time.sleep(0.2)
+    win32gui.SetWindowPos(hwnd, 0, x, y, w, h, win32con.SWP_NOZORDER)
+    time.sleep(0.3)
+
+
+def arrange_game_windows(hwnds, regions, screen_keys):
+    binding = {}
+    for i, key in enumerate(screen_keys):
+        if i >= len(hwnds):
+            log(f"no window available for region {key}")
+            break
+        hwnd = hwnds[i]
+        x, y, w, h = regions[key]
+        _, pid = win32process.GetWindowThreadProcessId(hwnd)
+        title = win32gui.GetWindowText(hwnd)
+        log(f"window hwnd={hwnd} pid={pid} '{title}' -> {key}(x={x},y={y},w={w},h={h})")
+        resize_move_window(hwnd, x, y, w, h)
+        binding[key] = (hwnd, pid)
+    return binding
+
+
+def login_mofa_haqi(timeout=120, hwnd=None):
     from common import const
     start_time = time.perf_counter()
 
@@ -745,7 +814,11 @@ def login_mofa_haqi(timeout=120):
 
     find_and_click(const.jinruyouxi)
     time.sleep(2)
-    focus_mofa_haqi_window()
+    if hwnd:
+        show_window(hwnd)
+        switch_window(hwnd)
+    else:
+        focus_mofa_haqi_window()
     find_and_click(const.denglu)
     find_and_click(const.jinruyouxi2)
     find_and_click(const.paopao)

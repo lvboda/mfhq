@@ -13,10 +13,46 @@ runtime_options = None
 
 
 class RuntimeOptions:
-    def __init__(self, split_screen=False, screens=None, regions=None):
+    def __init__(self, split_screen=False, screens=None, regions=None, window_binding=None):
         self.split_screen = split_screen
         self.screens = screens or []
         self.regions = regions or {}
+        self.window_binding = window_binding or {}
+
+
+def focus_game_window():
+    if runtime_options and runtime_options.split_screen:
+        region_name = tool.get_active_region_name()
+        binding = runtime_options.window_binding.get(region_name)
+        if binding:
+            tool.show_window(binding[0])
+            tool.switch_window(binding[0])
+            return True
+        return False
+    return tool.focus_mofa_haqi_window()
+
+
+def setup_split_screen(options):
+    count = len(options.screens)
+    hwnds = tool.start_mofa_haqi_instances(count)
+    if not hwnds:
+        tool.log("no game windows found")
+        return
+
+    if len(hwnds) < count:
+        tool.log(f"only {len(hwnds)} window(s) available for {count} screen(s)")
+
+    options.window_binding = tool.arrange_game_windows(hwnds, options.regions, options.screens)
+
+    for screen_key in options.screens:
+        binding = options.window_binding.get(screen_key)
+        if not binding:
+            continue
+        hwnd, pid = binding
+        tool.set_active_region(options.regions[screen_key], screen_key)
+        tool.log(f"logging in {screen_key} (hwnd={hwnd} pid={pid})")
+        tool.login_mofa_haqi(hwnd=hwnd)
+        tool.set_active_region()
 
 
 def cleanup(*_):
@@ -49,8 +85,7 @@ def start(round_no):
     prefix = f"第 {round_no} 轮" if not region_name else f"第 {round_no} 轮[{region_name}]"
 
     tool.log(f"{prefix}开始")
-    if runtime_options is None or not runtime_options.split_screen:
-        tool.focus_mofa_haqi_window()
+    focus_game_window()
     tool.wait_img_appear(const.ditu)
     tool.find_and_click(const.yingxionggu)
     tool.find_and_click(const.jiaruyingxionggu)
@@ -63,11 +98,14 @@ def start(round_no):
             attempts += 1
             ce_patch_attempts[attempt_key] = attempts
             tool.log(f"{prefix}：检测到 10 次提示，第 {attempts} 次启动 CE 修改")
-            target_pid = tool.get_active_region_window_pid() if runtime_options and runtime_options.split_screen else None
+            target_pid = None
+            if runtime_options and runtime_options.split_screen:
+                binding = runtime_options.window_binding.get(attempt_key)
+                if binding:
+                    target_pid = binding[1]
             tool.run_ce_double_patch(50417, -1, target_pid=target_pid)
             time.sleep(1)
-            if runtime_options is None or not runtime_options.split_screen:
-                tool.focus_mofa_haqi_window()
+            focus_game_window()
         else:
             tool.log(f"{prefix}：检测到 10 次提示，CE 修改已达最大尝试次数")
         time.sleep(10)
@@ -120,6 +158,11 @@ def parse_args(argv=None):
         action="store_true",
         help="print selected split-screen regions and exit",
     )
+    parser.add_argument(
+        "--show-windows",
+        action="store_true",
+        help="list detected game windows and exit",
+    )
     args = parser.parse_args(argv)
     try:
         args.selected_screens = screen.parse_screen_selection(args.screens)
@@ -148,14 +191,25 @@ def main(argv=None):
 
     tool.log("英雄谷脚本启动")
     log_runtime_options(runtime_options)
+
     if args.show_screens:
+        return
+
+    if args.show_windows:
+        windows = tool.find_game_windows()
+        if not windows:
+            tool.log("no game windows found")
+        for i, (hwnd, pid, title) in enumerate(windows, 1):
+            tool.log(f"[{i}] hwnd={hwnd} pid={pid} title={title}")
         return
 
     atexit.register(cleanup)
     for signum in (signal.SIGINT, signal.SIGTERM):
         signal.signal(signum, exit_with_cleanup)
 
-    if not tool.is_mofa_haqi_running():
+    if runtime_options.split_screen:
+        setup_split_screen(runtime_options)
+    elif not tool.is_mofa_haqi_running():
         tool.log("魔法哈奇未运行，尝试启动并登录")
         tool.start_mofa_haqi()
         tool.login_mofa_haqi()
