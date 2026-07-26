@@ -12,6 +12,7 @@ This project uses a simple `src` layout: shared modules stay in `src/common`, ex
   - `photo/`: shared image templates.
   - `resources/`: optional external resources, including Cheat Engine.
 - `src/yingxionggu.py`: yingxionggu script.
+- `src/hunzhu.py`: hunzhu script.
 - `src/pangpang.py`: pangpang card-clicker script.
 - `src/controller.py`: resident scheduler/controller script.
 - `scripts/build.py`: shared build implementation.
@@ -32,10 +33,14 @@ dist\\resources\\
 
 ```cmd
 mfhq.exe yingxionggu
+mfhq.exe hunzhu
 mfhq.exe pangpang
 mfhq.exe controller
 mfhq.exe yingxionggu -c
 ```
+
+`hunzhu` assumes the game is already running and logged in. It repeats a fixed three-step round
+(fuwenka, jinu, maichongaoyi), then presses `a` and `w` when the map is visible on screen.
 
 Running `mfhq.exe` without arguments opens an interactive prompt. You can then type a script
 name such as `controller` or `controller -c`.

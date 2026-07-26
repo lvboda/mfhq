@@ -7,6 +7,7 @@ import subprocess
 
 SCRIPTS = {
     "yingxionggu": "yingxionggu",
+    "hunzhu": "hunzhu",
     "pangpang": "pangpang",
     "controller": "controller",
 }

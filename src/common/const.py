@@ -116,3 +116,7 @@ jinruyouxi2 = tool.get_file_path('photo/jinruyouxi2.jpg')
 start = tool.get_file_path('photo/start.jpg')
 
 paopao = tool.get_file_path('photo/paopao.jpg')
+
+fuwenka = tool.get_file_path('photo/fuwenka.jpg')
+jinu = tool.get_file_path('photo/jinu.jpg')
+maichongaoyi = tool.get_file_path('photo/maichongaoyi.png')
