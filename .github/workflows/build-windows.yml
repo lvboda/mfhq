@@ -24,6 +24,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mfhq-windows-exe
+          retention-days: 7
           path: |
             dist\mfhq.exe
             dist\resources\**
