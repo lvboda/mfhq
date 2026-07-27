@@ -1,6 +1,3 @@
-# Source Generated with Decompyle++
-# File: tool.pyc (Python 3.12)
-
 import ctypes
 import datetime
 import json
@@ -413,7 +410,6 @@ def find_img(image_path, threshold=0.8):
 
 def find_img_in_roi(base_image_path, target_image_path, roi_size, threshold=0.8):
     base_center = find_img(base_image_path, threshold)
-# WARNING: Decompyle incomplete
 
 
 def find_and_sort_image_positions(image_path, threshold=0.8):
@@ -425,7 +421,6 @@ def find_and_sort_image_positions(image_path, threshold=0.8):
     :return: 排序后的唯一匹配位置的中心坐标列表
     '''
     pass
-# WARNING: Decompyle incomplete
 
 
 def find_and_click_r(image_path, duration=40):
@@ -462,7 +457,6 @@ def find_and_click_dis(image_path, dis, duration=40):
     position = find_img(image_path)
     start_time = time.perf_counter()
     time.sleep(random.uniform(0, 0.2))
-# WARNING: Decompyle incomplete
 
 
 def find_and_click_num(image_path, number, duration=40):
@@ -476,7 +470,6 @@ def find_and_click_num(image_path, number, duration=40):
     '''
     positions = find_and_sort_image_positions(image_path)
     start_time = time.perf_counter()
-# WARNING: Decompyle incomplete
 
 
 def find_and_click_All_condition():

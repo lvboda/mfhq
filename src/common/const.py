@@ -1,6 +1,3 @@
-# Source Generated with Decompyle++
-# File: const.pyc (Python 3.12)
-
 from common import tool
 qunzhianshang = tool.get_file_path('photo/qunzhianshang.jpg')
 tiaoguo = tool.get_file_path('photo/tiaoguo.jpg')
