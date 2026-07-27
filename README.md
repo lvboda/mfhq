@@ -39,8 +39,15 @@ mfhq.exe controller
 mfhq.exe yingxionggu -c
 ```
 
-`hunzhu` assumes the game is already running and logged in. It repeats a fixed three-step round
-(fuwenka, jinu, maichongaoyi), then presses `a` and `w` when the map is visible on screen.
+`hunzhu` assumes the game is already running and logged in. Each round clicks fuwenka, the jinu
+image for the selected level, the enemy above the weijinu anchor, then maichongaoyi. After the
+round it presses `a` and `w` when the map is visible on screen.
+
+Use `--level` to pick the jinu level: `1`, `2`, or `3` (default `1`).
+
+```cmd
+mfhq.exe hunzhu --level 2
+```
 
 Running `mfhq.exe` without arguments opens an interactive prompt. You can then type a script
 name such as `controller` or `controller -c`.
