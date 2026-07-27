@@ -12,6 +12,7 @@ JINU_BY_LEVEL = {
 }
 
 SELECT_ENEMY_OFFSET = (0, -30)
+MAP_WAIT_SECONDS = 40
 
 
 def start(round_no, level):
@@ -61,9 +62,12 @@ def main(argv=None):
     while True:
         round_count += 1
         start(round_count, args.level)
-        if tool.find_img(const.ditu) is not None:
+        if tool.wait_img_appear(const.ditu, MAP_WAIT_SECONDS) is not None:
+            tool.log(f"第 {round_count} 轮：检测到地图，走位")
             tool.press_with_correction('a', 0.5)
             tool.press_with_correction('w', 0.5)
+        else:
+            tool.log(f"第 {round_count} 轮：等待地图超时，跳过走位")
         time.sleep(2)
 
 
