@@ -17,9 +17,15 @@
 
 回合结束后检查地图是否在屏幕上（`find_img(const.ditu)`）。命中则依次按 `a` 0.5 秒、`w` 0.5 秒，然后进入下一回合。未命中则直接进入下一回合——地图检测只用来触发走位，不作为错误条件。
 
-## --level 参数
+## 等级参数
 
 取值 1/2/3，默认 1，决定第 2 步点击哪张激怒图。`hunzhu.py` 用 `JINU_BY_LEVEL` 字典把等级映射到 `const.jinu1` / `jinu2` / `jinu3`，argparse 的 `choices` 直接取该字典的键，等级集合只需在一处维护。
+
+以下五种写法等价：`hunzhu 2`、`hunzhu -l 2`、`hunzhu -level 2`、`hunzhu --l 2`、`hunzhu --level 2`。
+
+实现上用了两个 argparse 条目：位置参数 `level`（`nargs="?"`，默认 `None`）和选项 `-l` / `-level` / `--level`（`dest="level_option"`，默认 `None`）。两者不能共用 dest，因此在 `parse_args` 末尾合并——选项优先于位置参数，都缺省时取 1。`--l` 这种前缀缩写由 argparse 的 `allow_abbrev` 自动支持，无需声明；`-level` 因为是显式声明的选项串，不会被误解析成 `-l` 附带值 `evel`。
+
+`app.py` 无需为此改动：它的父解析器用 `parse_known_args`，位置参数 `script` 消费掉脚本名后，多余的位置参数和无法识别的选项都会进入 extras 原样透传，且不会误吞 `-c`。
 
 ## 实现
 

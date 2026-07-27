@@ -25,15 +25,32 @@ def start(round_no, level):
 
 
 def parse_args(argv=None):
+    levels = sorted(JINU_BY_LEVEL)
     parser = argparse.ArgumentParser(prog="mfhq hunzhu")
     parser.add_argument(
-        "--level",
+        "level",
         type=int,
-        choices=sorted(JINU_BY_LEVEL),
-        default=1,
+        choices=levels,
+        nargs="?",
+        default=None,
         help="hunzhu level, decides which jinu image to click",
     )
-    return parser.parse_args(argv)
+    parser.add_argument(
+        "-l",
+        "-level",
+        "--level",
+        dest="level_option",
+        type=int,
+        choices=levels,
+        default=None,
+        help="same as the positional level",
+    )
+    args = parser.parse_args(argv)
+    if args.level_option is not None:
+        args.level = args.level_option
+    elif args.level is None:
+        args.level = 1
+    return args
 
 
 def main(argv=None):

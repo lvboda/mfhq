@@ -43,9 +43,13 @@ mfhq.exe yingxionggu -c
 image for the selected level, the enemy above the weijinu anchor, then maichongaoyi. After the
 round it presses `a` and `w` when the map is visible on screen.
 
-Use `--level` to pick the jinu level: `1`, `2`, or `3` (default `1`).
+The jinu level is `1`, `2`, or `3` (default `1`). All of these are equivalent:
 
 ```cmd
+mfhq.exe hunzhu 2
+mfhq.exe hunzhu -l 2
+mfhq.exe hunzhu -level 2
+mfhq.exe hunzhu --l 2
 mfhq.exe hunzhu --level 2
 ```
 
