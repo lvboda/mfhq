@@ -113,7 +113,7 @@ start = tool.get_file_path('photo/start.jpg')
 
 paopao = tool.get_file_path('photo/paopao.jpg')
 
-fuwenka = tool.get_file_path('photo/fuwenka.png')
+fuwenka = tool.get_file_path('photo/fuwenka.jpg')
 jinu1 = tool.get_file_path('photo/jinu1.png')
 jinu2 = tool.get_file_path('photo/jinu2.png')
 jinu3 = tool.get_file_path('photo/jinu3.png')
