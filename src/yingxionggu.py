@@ -50,6 +50,19 @@ def exit_with_cleanup(signum, _frame):
     raise SystemExit(128 + signum)
 
 
+def wait_arena_result():
+    start_time = time.perf_counter()
+    while tool.is_mofa_haqi_running():
+        if tool.find_img(const.saichangchengji) is not None:
+            return True
+        if time.perf_counter() - start_time >= ARENA_RESULT_TIMEOUT:
+            tool.log("等待比赛成绩超时")
+            return False
+        time.sleep(0.2)
+    tool.log("等待比赛成绩期间魔法哈奇进程已不在")
+    return False
+
+
 def run_arena_bag_guard(callback):
     stop_event = threading.Event()
     thread = threading.Thread(target=tool.beibao100s, args=(stop_event,))
@@ -100,7 +113,7 @@ def start(round_no):
             tool.press_with_correction('b', 0.5)
         return
 
-    run_arena_bag_guard(lambda: tool.wait_img_appear(const.saichangchengji, ARENA_RESULT_TIMEOUT))
+    run_arena_bag_guard(wait_arena_result)
     tool.find_and_click(const.fanhuizhucheng)
     tool.find_and_click(const.shi)
     tool.log(f"第 {round_no} 轮完成")

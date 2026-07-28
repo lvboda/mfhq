@@ -91,11 +91,31 @@ while True:
 
 代价是掉线后最坏白跑一到两分钟。换来的是不需要跨线程中断机制，也不必把状态检查穿插进 `start()` 的每一步。掉线是低频事件，这个取舍成立。
 
-### 等待比赛成绩的超时
+### 等待比赛成绩
 
 `start()` 中等待比赛成绩原本是 `wait_img_appear(const.saichangchengji, 0)`，`duration=0` 表示永不超时。比赛期间是一轮里最长的一段，也最可能掉线；一旦在此掉线，游戏进程被关闭后该图永远不会出现，主线程会永久阻塞在这一行，轮次无法结束，`ensure_game_ready()` 也就永远不会执行——整个自愈机制形同虚设。
 
-改为 `ARENA_RESULT_TIMEOUT = 2400`（40 分钟）。该值需大于一场比赛的实际最长耗时，以免正常比赛被提前中断。代价是若掉线发生在比赛刚开始，脚本要空等满 40 分钟才超时并进入恢复。
+替换为 `wait_arena_result()`，两个退出条件：
+
+```python
+def wait_arena_result():
+    start_time = time.perf_counter()
+    while tool.is_mofa_haqi_running():
+        if tool.find_img(const.saichangchengji) is not None:
+            return True
+        if time.perf_counter() - start_time >= ARENA_RESULT_TIMEOUT:
+            tool.log("等待比赛成绩超时")
+            return False
+        time.sleep(0.2)
+    tool.log("等待比赛成绩期间魔法哈奇进程已不在")
+    return False
+```
+
+**进程消失即退出**是主要机制：比赛打多久都不打断，掉线后几秒内退出。单纯用固定超时不行——超时从等待开始计时而非从掉线计时，掉线越早浪费越多，最坏接近超时全长。
+
+**`ARENA_RESULT_TIMEOUT = 2400`（40 分钟）是兜底**，覆盖进程检查盖不住的情况：游戏进程存活但比赛因界面异常等原因永远出不了成绩。
+
+两条退出路径打不同的日志，便于在实跑日志中区分掉线与卡死。
 
 ## 改动清单
 
@@ -104,7 +124,7 @@ while True:
 | `src/common/tool.py` | 新增 `kill_mofa_haqi()`，按 `config.MOFA_HAQI_PROCESS_NAMES` 执行 `taskkill` |
 | `src/common/const.py` | 新增 `diaoxian` 路径常量 |
 | `src/common/photo/` | 新增掉线提示框模板图 |
-| `src/yingxionggu.py` | 新增守护线程与 `ensure_game_ready()`；`main()` 中的启动检查挪入循环；等待比赛成绩由无限等待改为 40 分钟超时 |
+| `src/yingxionggu.py` | 新增守护线程、`ensure_game_ready()` 与 `wait_arena_result()`；`main()` 中的启动检查挪入循环 |
 
 ## 明确不做的部分
 
