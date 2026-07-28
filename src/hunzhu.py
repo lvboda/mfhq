@@ -11,7 +11,7 @@ JINU_BY_LEVEL = {
     3: const.jinu3,
 }
 
-SELECT_ENEMY_OFFSET = (0, -30)
+SELECT_ENEMY_OFFSET = (0, -45)
 MAP_WAIT_SECONDS = 40
 TURN_LEFT_SECONDS = 0.25
 FORWARD_SECONDS = 1.0
@@ -20,6 +20,7 @@ FORWARD_SECONDS = 1.0
 def start(round_no, level):
     tool.log(f"第 {round_no} 轮开始[{level} 级激怒]")
     tool.focus_mofa_haqi_window()
+    tool.find_and_clickIfExist(const.guanbi)
     tool.find_and_click(const.fuwenka)
     tool.find_and_click(JINU_BY_LEVEL[level])
     tool.find_and_clickIfExist(const.weijinu, dis=SELECT_ENEMY_OFFSET)
