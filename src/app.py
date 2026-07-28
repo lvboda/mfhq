@@ -1,5 +1,6 @@
 import argparse
 import ctypes
+import inspect
 import importlib
 import os
 import shlex
@@ -7,6 +8,7 @@ import subprocess
 
 SCRIPTS = {
     "yingxionggu": "yingxionggu",
+    "hunzhu": "hunzhu",
     "pangpang": "pangpang",
     "controller": "controller",
 }
@@ -75,22 +77,32 @@ def prompt_args(parser):
             parser.print_help()
             continue
         try:
-            return parser.parse_args(shlex.split(command))
+            return parser.parse_known_args(shlex.split(command))
         except SystemExit:
             continue
 
 
+def run_script(script, script_args):
+    module = importlib.import_module(SCRIPTS[script])
+    main_func = module.main
+    if inspect.signature(main_func).parameters:
+        main_func(script_args)
+    else:
+        if script_args:
+            raise SystemExit(f"{script} does not support extra arguments: {' '.join(script_args)}")
+        main_func()
+
+
 def main():
     parser = build_parser()
-    args = parser.parse_args()
+    args, script_args = parser.parse_known_args()
     if args.script is None:
-        args = prompt_args(parser)
+        args, script_args = prompt_args(parser)
 
     if args.console:
         detach_to_console()
 
-    module = importlib.import_module(SCRIPTS[args.script])
-    module.main()
+    run_script(args.script, script_args)
 
 
 if __name__ == "__main__":

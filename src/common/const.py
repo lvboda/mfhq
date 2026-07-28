@@ -1,6 +1,3 @@
-# Source Generated with Decompyle++
-# File: const.pyc (Python 3.12)
-
 from common import tool
 qunzhianshang = tool.get_file_path('photo/qunzhianshang.jpg')
 tiaoguo = tool.get_file_path('photo/tiaoguo.jpg')
@@ -35,7 +32,6 @@ keyiyongdechongwuka = tool.get_file_path('photo/keyiyongdechongwuka.jpg')
 huanchongwu = tool.get_file_path('photo/huanchongwu.jpg')
 huochongwu = tool.get_file_path('photo/huochongwu.jpg')
 gudingjingtou = tool.get_file_path('photo/gudingjingtou.jpg')
-woziji = tool.get_file_path('photo/woziji.jpg')
 duimianzhugong = tool.get_file_path('photo/duimianzhugong.jpg')
 caicaiwoshishui = tool.get_file_path('photo/caicaiwoshishui.jpg')
 duimian1 = tool.get_file_path('photo/duimian1.jpg')
@@ -116,3 +112,11 @@ jinruyouxi2 = tool.get_file_path('photo/jinruyouxi2.jpg')
 start = tool.get_file_path('photo/start.jpg')
 
 paopao = tool.get_file_path('photo/paopao.jpg')
+
+fuwenka = tool.get_file_path('photo/fuwenka.png')
+jinu1 = tool.get_file_path('photo/jinu1.png')
+jinu2 = tool.get_file_path('photo/jinu2.png')
+jinu3 = tool.get_file_path('photo/jinu3.png')
+weijinu = tool.get_file_path('photo/weijinu.png')
+maichongaoyi = tool.get_file_path('photo/maichongaoyi.png')
+ditu1 = tool.get_file_path('photo/ditu1.png')

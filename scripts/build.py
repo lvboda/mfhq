@@ -62,7 +62,7 @@ def add_data_args(source, dest):
 
 def hidden_import_args():
     args = []
-    for module in ["yingxionggu", "pangpang", "controller"]:
+    for module in ["yingxionggu", "hunzhu", "pangpang", "controller"]:
         args.extend(["--hidden-import", module])
     return args
 

@@ -12,6 +12,7 @@ This project uses a simple `src` layout: shared modules stay in `src/common`, ex
   - `photo/`: shared image templates.
   - `resources/`: optional external resources, including Cheat Engine.
 - `src/yingxionggu.py`: yingxionggu script.
+- `src/hunzhu.py`: hunzhu script.
 - `src/pangpang.py`: pangpang card-clicker script.
 - `src/controller.py`: resident scheduler/controller script.
 - `scripts/build.py`: shared build implementation.
@@ -32,9 +33,24 @@ dist\\resources\\
 
 ```cmd
 mfhq.exe yingxionggu
+mfhq.exe hunzhu
 mfhq.exe pangpang
 mfhq.exe controller
 mfhq.exe yingxionggu -c
+```
+
+`hunzhu` assumes the game is already running and logged in. Each round clicks fuwenka, the jinu
+image for the selected level, the enemy above the weijinu anchor, then maichongaoyi. After the
+round it presses `a` and `w` when the map is visible on screen.
+
+The jinu level is `1`, `2`, or `3` (default `1`). All of these are equivalent:
+
+```cmd
+mfhq.exe hunzhu 2
+mfhq.exe hunzhu -l 2
+mfhq.exe hunzhu -level 2
+mfhq.exe hunzhu --l 2
+mfhq.exe hunzhu --level 2
 ```
 
 Running `mfhq.exe` without arguments opens an interactive prompt. You can then type a script
