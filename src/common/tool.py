@@ -655,6 +655,16 @@ def focus_mofa_haqi_window():
             return True
     return False
 
+def kill_mofa_haqi():
+    for name in config.MOFA_HAQI_PROCESS_NAMES:
+        subprocess.run(
+            ['taskkill', '/F', '/IM', name],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0),
+        )
+
+
 def start_mofa_haqi(game_path=None):
     if is_mofa_haqi_running():
         return True

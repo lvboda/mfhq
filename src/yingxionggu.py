@@ -8,6 +8,36 @@ from common import const, tool
 round_count = 0
 ce_patch_attempts = 0
 MAX_CE_PATCH_ATTEMPTS = 2
+DISCONNECT_CHECK_SECONDS = 300
+ARENA_RESULT_TIMEOUT = 2400
+
+recovering = threading.Event()
+
+
+def ensure_game_ready():
+    if tool.is_mofa_haqi_running():
+        return
+
+    recovering.set()
+    try:
+        tool.log("魔法哈奇未运行，尝试启动并登录")
+        tool.start_mofa_haqi()
+        tool.login_mofa_haqi()
+    finally:
+        recovering.clear()
+
+
+def watch_disconnect():
+    while True:
+        time.sleep(DISCONNECT_CHECK_SECONDS)
+        if recovering.is_set():
+            continue
+        if not tool.is_mofa_haqi_running():
+            tool.log("守护线程：魔法哈奇进程不在")
+            continue
+        if tool.find_img(const.diaoxian) is not None:
+            tool.log("守护线程：检测到掉线提示，关闭游戏进程")
+            tool.kill_mofa_haqi()
 
 
 def cleanup(*_):
@@ -70,7 +100,7 @@ def start(round_no):
             tool.press_with_correction('b', 0.5)
         return
 
-    run_arena_bag_guard(lambda: tool.wait_img_appear(const.saichangchengji, 0))
+    run_arena_bag_guard(lambda: tool.wait_img_appear(const.saichangchengji, ARENA_RESULT_TIMEOUT))
     tool.find_and_click(const.fanhuizhucheng)
     tool.find_and_click(const.shi)
     tool.log(f"第 {round_no} 轮完成")
@@ -82,15 +112,17 @@ def main():
     for signum in (signal.SIGINT, signal.SIGTERM):
         signal.signal(signum, exit_with_cleanup)
 
-    if not tool.is_mofa_haqi_running():
-        tool.log("魔法哈奇未运行，尝试启动并登录")
-        tool.start_mofa_haqi()
-        tool.login_mofa_haqi()
+    ensure_game_ready()
+
+    watcher = threading.Thread(target=watch_disconnect)
+    watcher.daemon = True
+    watcher.start()
 
     try:
         while True:
             global round_count
             round_count += 1
+            ensure_game_ready()
             start(round_count)
             time.sleep(2)
     finally:

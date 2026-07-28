@@ -37,14 +37,20 @@ while True:
 ```python
 def watch_disconnect():
     while True:
-        if not recovering.is_set():
-            if not tool.is_mofa_haqi_running() or tool.find_img(const.diaoxian) is not None:
-                tool.log("检测到掉线，关闭游戏进程")
-                tool.kill_mofa_haqi()
         time.sleep(DISCONNECT_CHECK_SECONDS)
+        if recovering.is_set():
+            continue
+        if not tool.is_mofa_haqi_running():
+            tool.log("守护线程：魔法哈奇进程不在")
+            continue
+        if tool.find_img(const.diaoxian) is not None:
+            tool.log("守护线程：检测到掉线提示，关闭游戏进程")
+            tool.kill_mofa_haqi()
 ```
 
 检查间隔 `DISCONNECT_CHECK_SECONDS = 300`（5 分钟）。该值决定 A 类掉线后脚本空转多久才被发现；单次检查是一次全屏截图加一次模板匹配，约几十毫秒，5 分钟一次的开销可忽略。
+
+进程已经不在时只记日志、不执行 `taskkill`——没有可关闭的对象，恢复交由主循环的 `ensure_game_ready()` 完成。
 
 ### 恢复路径
 
@@ -85,6 +91,12 @@ while True:
 
 代价是掉线后最坏白跑一到两分钟。换来的是不需要跨线程中断机制，也不必把状态检查穿插进 `start()` 的每一步。掉线是低频事件，这个取舍成立。
 
+### 等待比赛成绩的超时
+
+`start()` 中等待比赛成绩原本是 `wait_img_appear(const.saichangchengji, 0)`，`duration=0` 表示永不超时。比赛期间是一轮里最长的一段，也最可能掉线；一旦在此掉线，游戏进程被关闭后该图永远不会出现，主线程会永久阻塞在这一行，轮次无法结束，`ensure_game_ready()` 也就永远不会执行——整个自愈机制形同虚设。
+
+改为 `ARENA_RESULT_TIMEOUT = 2400`（40 分钟）。该值需大于一场比赛的实际最长耗时，以免正常比赛被提前中断。代价是若掉线发生在比赛刚开始，脚本要空等满 40 分钟才超时并进入恢复。
+
 ## 改动清单
 
 | 文件 | 改动 |
@@ -92,11 +104,7 @@ while True:
 | `src/common/tool.py` | 新增 `kill_mofa_haqi()`，按 `config.MOFA_HAQI_PROCESS_NAMES` 执行 `taskkill` |
 | `src/common/const.py` | 新增 `diaoxian` 路径常量 |
 | `src/common/photo/` | 新增掉线提示框模板图 |
-| `src/yingxionggu.py` | 新增守护线程与 `ensure_game_ready()`；`main()` 中的启动检查挪入循环 |
-
-## 依赖
-
-掉线提示框的模板图尚未提供。缺少该图时只能检测 C 类（进程崩溃），A 类（弹框）无法检测。实现可以先完成，但 A 类检测在补齐该图之前不生效。
+| `src/yingxionggu.py` | 新增守护线程与 `ensure_game_ready()`；`main()` 中的启动检查挪入循环；等待比赛成绩由无限等待改为 40 分钟超时 |
 
 ## 明确不做的部分
 
