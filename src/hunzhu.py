@@ -64,7 +64,7 @@ def main(argv=None):
     while True:
         round_count += 1
         start(round_count, args.level)
-        if tool.wait_img_appear(const.ditu, MAP_WAIT_SECONDS) is not None:
+        if tool.wait_img_appear(const.ditu1, MAP_WAIT_SECONDS) is not None:
             tool.log(f"第 {round_count} 轮：检测到地图，走位")
             tool.press_with_correction('a', TURN_LEFT_SECONDS)
             tool.press_with_correction('w', FORWARD_SECONDS)
