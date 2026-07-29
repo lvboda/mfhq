@@ -60,9 +60,9 @@ def watch_disconnect():
             if not tool.is_mofa_haqi_running():
                 tool.log("守护线程：魔法哈奇进程不在")
                 continue
-            if tool.find_img(const.diaoxian) is None and tool.find_img(const.denglu) is None:
+            if tool.find_img(const.diaoxian) is None:
                 continue
-            tool.log("守护线程：检测到掉线，关闭游戏进程")
+            tool.log("守护线程：检测到掉线提示，关闭游戏进程")
             if not tool.kill_mofa_haqi():
                 tool.log("守护线程：关闭游戏进程失败")
         except Exception as e:
