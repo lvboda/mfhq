@@ -86,11 +86,16 @@ mfhq/
 
 两套实现并行存在，Python 版全程保持可用，按脚本逐个切换，不做一次性替换。
 
-## 交叉编译与 CI
+## 交叉编译
 
-本地：`brew install mingw-w64`，然后 `cargo build --release --target x86_64-pc-windows-gnu`。
+```bash
+brew install mingw-w64
+cd rust && cargo build --release --target x86_64-pc-windows-gnu
+```
 
-CI：新增独立 workflow，在 ubuntu runner 上交叉编译。相比现有的 `windows-latest` 构建更快，产物从 81 MB 降至个位数 MB——同时缓解私有仓库 500 MB artifact 配额的问题。现有 Python 构建的 workflow 不改动。
+链接器在 `~/.cargo/config.toml` 中指向 `x86_64-w64-mingw32-gcc`，无需每次传参。产物为单文件 exe，模板图已内嵌，不需要随附资源目录。
+
+**不为 Rust 构建配置 CI。** Python 版必须依赖 GitHub Actions，是因为 PyInstaller 无法交叉编译；Rust 二十秒即可在本地产出 exe，CI 只会增加一条更慢的路径。现有的 Python 构建 workflow 保持不动。
 
 ## 风险
 
