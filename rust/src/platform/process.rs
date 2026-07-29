@@ -92,16 +92,6 @@ pub fn exe_path(pid: u32) -> String {
     }
 }
 
-pub fn kill_by_name(names: &[&str]) -> bool {
-    let mut pids = Vec::new();
-    each_process(|pid, name| {
-        if names.iter().any(|n| n.eq_ignore_ascii_case(name)) {
-            pids.push(pid);
-        }
-    });
-    pids.into_iter().map(kill_pid).any(|ok| ok)
-}
-
 pub fn kill_pid(pid: u32) -> bool {
     unsafe {
         match OpenProcess(PROCESS_TERMINATE, false, pid) {

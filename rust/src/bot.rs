@@ -8,8 +8,7 @@ use crate::vision;
 pub const THRESHOLD: f64 = 0.8;
 pub const DEFAULT_WAIT: f64 = 40.0;
 
-pub const GAME_PROCESS_NAMES: [&str; 2] = ["paraengineclient.exe", "00000BAC-paraengineclient.exe"];
-pub const GAME_WINDOW_KEYS: [&str; 3] = ["魔法哈奇", "哈奇", "paraengine"];
+pub use crate::config::{GAME_PROCESS_NAMES, GAME_WINDOW_KEYS};
 
 /// 截一次屏并匹配，命中返回匹配区域中心坐标。对应 Python 的 find_img。
 pub fn find(tmpl: &RgbImage) -> Option<(i32, i32)> {
