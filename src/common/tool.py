@@ -656,13 +656,24 @@ def focus_mofa_haqi_window():
     return False
 
 def kill_mofa_haqi():
+    killed = False
     for name in config.MOFA_HAQI_PROCESS_NAMES:
-        subprocess.run(
-            ['taskkill', '/F', '/IM', name],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0),
-        )
+        try:
+            result = subprocess.run(
+                ['taskkill', '/F', '/IM', name],
+                capture_output=True,
+                text=True,
+                errors='ignore',
+                creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0),
+            )
+        except Exception as e:
+            log(f'taskkill {name} failed: {e}')
+            continue
+        if result.returncode == 0:
+            killed = True
+        elif 'not found' not in (result.stderr or '').lower():
+            log(f'taskkill {name} returned {result.returncode}: {(result.stderr or "").strip()}')
+    return killed
 
 
 def start_mofa_haqi(game_path=None):
