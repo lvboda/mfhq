@@ -25,6 +25,7 @@ fn usage() -> ! {
     eprintln!("  mfhq hunzhu [1|2|3]        run the hunzhu loop");
     eprintln!("  mfhq controller            run the scheduler");
     eprintln!("  mfhq match <scene> <tmpl>  print template match score (portable)");
+    eprintln!("  mfhq diag [out.png]        capture the screen and score every template");
     eprintln!();
     eprintln!("  -c, --console              detach the RDP session to console before running");
     std::process::exit(2)
@@ -125,6 +126,11 @@ fn main() {
         Some("yingxionggu") => {
             platform::console::install_cleanup();
             tasks::yingxionggu::run();
+        }
+        #[cfg(windows)]
+        Some("diag") => {
+            let out = args.get(1).map(|s| s.as_str()).unwrap_or("mfhq_diag.png");
+            tasks::diag::run(out);
         }
         #[cfg(windows)]
         Some("controller") => {
