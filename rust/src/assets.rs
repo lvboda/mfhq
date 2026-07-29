@@ -33,3 +33,23 @@ pub fn jinu_by_level(level: u8) -> &'static RgbImage {
         _ => jinu1(),
     }
 }
+
+template!(ditu, "ditu.jpg");
+template!(yingxionggu, "yingxionggu.jpg");
+template!(jiaruyingxionggu, "jiaruyingxionggu.jpg");
+template!(yingxionggu10ci, "yingxionggu10ci.png");
+template!(queding, "queding.jpg");
+template!(shi, "shi.jpg");
+template!(fou, "fou.jpg");
+template!(dianjichakan, "dianjichakan.jpg");
+template!(yingxionggumenpiao, "yingxionggumenpiao.jpg");
+template!(goumai1, "goumai1.jpg");
+template!(mashanggoumai1, "mashanggoumai1.jpg");
+template!(cha, "cha.jpg");
+template!(fanhuizhucheng, "fanhuizhucheng.jpg");
+template!(zhuangbei, "zhuangbei.jpg");
+template!(saichangchengji, "saichangchengji.jpg");
+template!(jinruyouxi, "jinruyouxi.jpg");
+template!(jinruyouxi2, "jinruyouxi2.jpg");
+template!(denglu, "denglu.jpg");
+template!(paopao, "paopao.jpg");

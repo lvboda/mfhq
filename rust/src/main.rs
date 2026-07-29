@@ -3,6 +3,10 @@ mod vision;
 #[cfg(windows)]
 mod assets;
 #[cfg(windows)]
+mod ce;
+#[cfg(windows)]
+mod config;
+#[cfg(windows)]
 mod bot;
 #[cfg(windows)]
 mod log;
@@ -15,7 +19,9 @@ use std::env;
 
 fn usage() -> ! {
     eprintln!("usage:");
+    eprintln!("  mfhq yingxionggu           run the yingxionggu loop");
     eprintln!("  mfhq hunzhu [1|2|3]        run the hunzhu loop");
+    eprintln!("  mfhq controller            run the scheduler");
     eprintln!("  mfhq match <scene> <tmpl>  print template match score (portable)");
     std::process::exit(2)
 }
@@ -60,6 +66,10 @@ fn main() {
         }
         #[cfg(windows)]
         Some("hunzhu") => tasks::hunzhu::run(parse_level(&args[1..])),
+        #[cfg(windows)]
+        Some("yingxionggu") => tasks::yingxionggu::run(),
+        #[cfg(windows)]
+        Some("controller") => tasks::controller::run(),
         #[cfg(not(windows))]
         Some("hunzhu") => {
             eprintln!("hunzhu is only available on Windows");
