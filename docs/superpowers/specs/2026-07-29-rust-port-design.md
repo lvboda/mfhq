@@ -23,7 +23,9 @@ run_ce_double_patch          close_cheat_engine
 
 其余 65 个是反编译遗留的死代码，不移植。
 
-模板图 222 张、合计 1.0 MB，用 `include_bytes!` 编译进二进制，保持单文件分发。
+模板图放在 `rust/photo/`，只保留 Rust 实际用到的 27 张，用 `include_bytes!` 编译进二进制，保持单文件分发。
+
+**两套实现各自持有模板，不共用 `src/common/photo/`。** 模板需要随游戏窗口尺寸重新截取，若共用则一侧的调整会波及另一侧——移植期间两个版本可能运行在不同的会话尺寸下，共用会互相破坏。
 
 ## 目录结构
 
@@ -105,7 +107,7 @@ cd rust && cargo build --release --target x86_64-pc-windows-gnu
 
 ## 明确不做的部分
 
-- 不改动 `src/` 下的 Python 代码与 `scripts/build.py`
+- 不改动 `src/` 下的 Python 代码、模板图与 `scripts/build.py`
 - 不移植 `tool.py` 中未被使用的 65 个函数
 - 不移植 `pangpang`
 - 不引入任何带 C 依赖的 crate

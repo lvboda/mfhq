@@ -7,7 +7,7 @@ macro_rules! template {
             static CELL: OnceLock<RgbImage> = OnceLock::new();
             CELL.get_or_init(|| {
                 image::load_from_memory(include_bytes!(concat!(
-                    "../../src/common/photo/",
+                    "../photo/",
                     $file
                 )))
                 .expect(concat!("decode ", $file))
