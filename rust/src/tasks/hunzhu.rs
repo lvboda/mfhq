@@ -16,7 +16,7 @@ fn start(round_no: u64, level: u8) {
     window::focus_game(&bot::GAME_WINDOW_KEYS);
     bot::click_if_exists(assets::guanbi(), (0, 0));
     bot::find_and_click(assets::fuwenka(), "fuwenka.png");
-    bot::find_and_click(assets::jinu_by_level(level), "jinu.png");
+    bot::find_and_click(assets::jinu_by_level(level), &format!("jinu{level}.png"));
     bot::click_if_exists(assets::weijinu(), SELECT_ENEMY_OFFSET);
     bot::find_and_click(assets::maichongaoyi(), "maichongaoyi.png");
     log(&format!("第 {round_no} 轮完成"));
