@@ -2,8 +2,8 @@ use std::thread::sleep;
 use std::time::{Duration, Instant};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     INPUT, INPUT_0, INPUT_KEYBOARD, INPUT_MOUSE, KEYBD_EVENT_FLAGS, KEYBDINPUT, KEYEVENTF_KEYUP,
-    MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MOVE, MOUSEINPUT,
-    SendInput, VIRTUAL_KEY, VkKeyScanW,
+    MAPVK_VK_TO_VSC, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP,
+    MOUSEEVENTF_MOVE, MOUSEINPUT, MapVirtualKeyW, SendInput, VIRTUAL_KEY, VkKeyScanW,
 };
 
 use super::screen;
@@ -58,12 +58,15 @@ pub fn click(x: i32, y: i32) {
 }
 
 fn key_input(vk: VIRTUAL_KEY, up: bool) -> INPUT {
+    // 同时填扫描码：走 DirectInput / 原始输入的游戏只认扫描码，
+    // 只带虚拟键码的注入事件会被忽略。
+    let scan = unsafe { MapVirtualKeyW(vk.0 as u32, MAPVK_VK_TO_VSC) } as u16;
     INPUT {
         r#type: INPUT_KEYBOARD,
         Anonymous: INPUT_0 {
             ki: KEYBDINPUT {
                 wVk: vk,
-                wScan: 0,
+                wScan: scan,
                 dwFlags: if up { KEYEVENTF_KEYUP } else { KEYBD_EVENT_FLAGS(0) },
                 time: 0,
                 dwExtraInfo: 0,
