@@ -4,7 +4,7 @@ use std::process::Command;
 
 use crate::config;
 use crate::log::log;
-use crate::platform::process;
+use crate::pidfile::{self, runtime_dir};
 
 const CE_EXE_NAMES: [&str; 3] = [
     "cheatengine-x86_64.exe",
@@ -12,67 +12,8 @@ const CE_EXE_NAMES: [&str; 3] = [
     "cheatengine-i386.exe",
 ];
 
-pub fn runtime_dir() -> PathBuf {
-    std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
-        .unwrap_or_else(|| PathBuf::from("."))
-}
-
-fn pid_file() -> PathBuf {
-    runtime_dir().join(config::CE_PID_FILE)
-}
-
-fn write_pid(pid: u32, exe: &Path) {
-    let value = serde_json::json!({ "pid": pid, "exe_path": exe.to_string_lossy() });
-    let _ = fs::write(pid_file(), value.to_string());
-}
-
-fn read_pid() -> (u32, String) {
-    let text = match fs::read_to_string(pid_file()) {
-        Ok(t) => t,
-        Err(_) => return (0, String::new()),
-    };
-    match serde_json::from_str::<serde_json::Value>(&text) {
-        Ok(v) => (
-            v.get("pid").and_then(|p| p.as_u64()).unwrap_or(0) as u32,
-            v.get("exe_path")
-                .and_then(|p| p.as_str())
-                .unwrap_or("")
-                .to_string(),
-        ),
-        // 兼容旧格式：文件里只有一个裸 pid
-        Err(_) => (text.trim().parse().unwrap_or(0), String::new()),
-    }
-}
-
-fn clear_pid() {
-    let _ = fs::remove_file(pid_file());
-}
-
-/// 只有记录的 exe 路径与进程实际路径一致时才终止，避免误杀 PID 复用的无关进程。
-pub fn close() -> bool {
-    let (pid, expected) = read_pid();
-    if !process::pid_alive(pid) {
-        clear_pid();
-        return false;
-    }
-    if expected.is_empty() {
-        log(&format!("skip closing Cheat Engine pid={pid}: missing recorded exe path"));
-        return false;
-    }
-    let current = process::exe_path(pid);
-    if current.to_lowercase() != expected.to_lowercase() {
-        log(&format!("skip closing Cheat Engine pid={pid}: exe path mismatch"));
-        clear_pid();
-        return false;
-    }
-    let ok = process::kill_pid(pid);
-    clear_pid();
-    if ok {
-        log(&format!("closed Cheat Engine pid={pid}"));
-    }
-    ok
+pub fn close() {
+    crate::pidfile::kill_if_owned(config::CE_PID_FILE, "Cheat Engine");
 }
 
 fn locate() -> Option<(PathBuf, PathBuf)> {
@@ -111,7 +52,7 @@ fn locate() -> Option<(PathBuf, PathBuf)> {
 fn lua_script(scan_value: i64, write_value: i64, script_path: &Path, log_path: &Path) -> String {
     format!(
         r#"local processName = "{process}"
-local processKeyword = "paraengineclient"
+local processKeyword = "{keyword}"
 local scanValue = "{scan}"
 local writeValue = {write}
 local scriptPath = [[{script}]]
@@ -200,7 +141,8 @@ timer.OnTimer = function(t)
 end
 timer.Enabled = true
 "#,
-        process = config::CE_TARGET_PROCESS,
+        process = config::GAME_PROCESS_NAMES[0],
+        keyword = config::GAME_PROCESS_NAMES[0].trim_end_matches(".exe"),
         scan = scan_value,
         write = write_value,
         script = script_path.display(),
@@ -209,7 +151,7 @@ timer.Enabled = true
 }
 
 /// 对应 Python 的 run_ce_double_patch：写入 CE autorun 脚本并拉起 CE。
-pub fn double_patch(scan_value: i64, write_value: i64) -> bool {
+pub fn double_patch(scan_value: i64, write_value: i64) {
     let (ce_dir, ce_exe) = match locate() {
         Some(v) => v,
         None => {
@@ -217,7 +159,7 @@ pub fn double_patch(scan_value: i64, write_value: i64) -> bool {
                 "Cheat Engine not found. Put it in resources or set {}",
                 config::CE_DIR_ENV
             ));
-            return false;
+            return;
         }
     };
 
@@ -227,7 +169,7 @@ pub fn double_patch(scan_value: i64, write_value: i64) -> bool {
     let autorun = ce_dir.join("autorun");
     if fs::create_dir_all(&autorun).is_err() {
         log("failed to create CE autorun directory");
-        return false;
+        return;
     }
     if let Ok(entries) = fs::read_dir(&autorun) {
         for path in entries.flatten().map(|e| e.path()) {
@@ -248,17 +190,11 @@ pub fn double_patch(scan_value: i64, write_value: i64) -> bool {
     let script_path = autorun.join(script_name);
     if fs::write(&script_path, lua_script(scan_value, write_value, &script_path, &patch_log)).is_err() {
         log("failed to write CE autorun script");
-        return false;
+        return;
     }
 
     match Command::new(&ce_exe).current_dir(&ce_dir).spawn() {
-        Ok(child) => {
-            write_pid(child.id(), &ce_exe);
-            true
-        }
-        Err(e) => {
-            log(&format!("failed to start Cheat Engine: {e}"));
-            false
-        }
+        Ok(child) => pidfile::write(config::CE_PID_FILE, child.id(), &ce_exe),
+        Err(e) => log(&format!("failed to start Cheat Engine: {e}")),
     }
 }

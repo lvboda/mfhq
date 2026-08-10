@@ -16,5 +16,4 @@ pub const GAME_WINDOW_KEYS: [&str; 3] = ["魔法哈奇", "哈奇", "paraengine"]
 pub const CE_DIR: &str = r"C:\Users\Cheat Engine 6.5 (1)\Cheat Engine 6.5";
 pub const CE_DIR_ENV: &str = "MFHQ_CE_DIR";
 pub const CE_BUNDLED_DIR: &str = "resources/Cheat Engine 6.5";
-pub const CE_TARGET_PROCESS: &str = "paraengineclient.exe";
 pub const CE_PID_FILE: &str = "cheat_engine.pid";

@@ -32,20 +32,20 @@ fn session_id() -> Option<u32> {
 
 /// 对应 Python 的 detach_to_console：把当前 RDP 会话切到控制台，
 /// 断开远程连接后仍保留可用于截图的交互式桌面。
-pub fn detach_to_console() -> bool {
+pub fn detach_to_console() {
     if std::env::var("SESSIONNAME")
         .map(|s| s.eq_ignore_ascii_case("console"))
         .unwrap_or(false)
     {
         println!("already running on console session; skipped tscon");
-        return true;
+        return;
     }
 
     let id = match session_id() {
         Some(id) => id,
         None => {
             println!("failed to get current session id; skipped tscon");
-            return false;
+            return;
         }
     };
 
@@ -57,19 +57,14 @@ pub fn detach_to_console() -> bool {
         .output();
 
     match output {
-        Ok(out) if out.status.success() => {
-            println!("detaching RDP session {id} to console");
-            true
-        }
+        Ok(out) if out.status.success() => println!("detaching RDP session {id} to console"),
         Ok(out) => {
             let err = String::from_utf8_lossy(if out.stderr.is_empty() { &out.stdout } else { &out.stderr });
             println!("tscon failed for session {id}: {}", err.trim());
             println!("try running mfhq.exe as Administrator");
-            false
         }
         Err(e) => {
             println!("failed to run tscon for session {id}: {e}");
-            false
         }
     }
 }

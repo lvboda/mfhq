@@ -1,4 +1,5 @@
 use crate::assets;
+use crate::bot;
 use crate::platform::screen;
 use crate::vision;
 
@@ -22,34 +23,25 @@ pub fn run(out: &str) {
         println!("截图已保存: {out}");
     }
 
-    println!("当前匹配阈值: {:.2}（可用 MFHQ_THRESHOLD 覆盖）", crate::bot::threshold());
-
-    let templates: [(&str, &image::RgbImage); 8] = [
-        ("fuwenka", assets::fuwenka()),
-        ("jinu1", assets::jinu1()),
-        ("jinu2", assets::jinu2()),
-        ("jinu3", assets::jinu3()),
-        ("weijinu", assets::weijinu()),
-        ("maichongaoyi", assets::maichongaoyi()),
-        ("ditu1", assets::ditu1()),
-        ("guanbi", assets::guanbi()),
-    ];
-
+    let threshold = bot::threshold();
+    println!("当前匹配阈值: {threshold:.2}（可用 MFHQ_THRESHOLD 覆盖）");
     println!();
-    println!("{:<16} {:<10} {:<10} {}", "模板", "尺寸", "最高分", "位置");
-    println!("{}", "-".repeat(52));
-    for (name, tmpl) in templates {
-        match vision::match_template(&scene, tmpl) {
+    println!("{:<26} {:<10} {:<10} {}", "模板", "尺寸", "最高分", "位置");
+    println!("{}", "-".repeat(60));
+
+    for tmpl in assets::ALL {
+        let img = tmpl.image();
+        match vision::match_template(&scene, img) {
             Some(m) => println!(
-                "{:<16} {:<10} {:<10.4} ({}, {}){}",
-                name,
-                format!("{}x{}", tmpl.width(), tmpl.height()),
+                "{:<26} {:<10} {:<10.4} ({}, {}){}",
+                tmpl.name,
+                format!("{}x{}", img.width(), img.height()),
                 m.score,
                 m.x,
                 m.y,
-                if m.score > crate::bot::threshold() { "  命中" } else { "" }
+                if m.score > threshold { "  命中" } else { "" }
             ),
-            None => println!("{name:<16} 模板比屏幕还大"),
+            None => println!("{:<26} 模板比屏幕还大", tmpl.name),
         }
     }
 }

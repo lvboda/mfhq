@@ -55,14 +55,8 @@ pub fn capture() -> Option<RgbImage> {
             return None;
         }
 
-        let mut img = RgbImage::new(w as u32, h as u32);
-        for y in 0..h as u32 {
-            for x in 0..w as u32 {
-                let i = ((y * w as u32 + x) * 4) as usize;
-                // GDI 是 BGRA 排列
-                img.put_pixel(x, y, image::Rgb([buf[i + 2], buf[i + 1], buf[i]]));
-            }
-        }
-        Some(img)
+        // GDI 给的是 BGRA，image 有现成的构造，不必逐像素搬。
+        let rgba = image::RgbaImage::from_raw_bgra(w as u32, h as u32, buf)?;
+        Some(image::DynamicImage::ImageRgba8(rgba).to_rgb8())
     }
 }

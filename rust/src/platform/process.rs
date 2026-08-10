@@ -12,12 +12,11 @@ use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 use windows::core::{HSTRING, PCWSTR};
 
 fn entry_name(entry: &PROCESSENTRY32W) -> String {
-    let end = entry
-        .szExeFile
-        .iter()
-        .position(|&c| c == 0)
-        .unwrap_or(entry.szExeFile.len());
-    String::from_utf16_lossy(&entry.szExeFile[..end])
+    unsafe {
+        PCWSTR::from_raw(entry.szExeFile.as_ptr())
+            .to_string()
+            .unwrap_or_default()
+    }
 }
 
 fn each_process<F: FnMut(u32, &str)>(mut f: F) {
@@ -42,27 +41,22 @@ fn each_process<F: FnMut(u32, &str)>(mut f: F) {
     }
 }
 
-pub fn is_running(names: &[&str]) -> bool {
+fn any_process(pred: impl Fn(u32, &str) -> bool) -> bool {
     let mut found = false;
-    each_process(|_, name| {
-        if names.iter().any(|n| n.eq_ignore_ascii_case(name)) {
+    each_process(|pid, name| {
+        if !found && pred(pid, name) {
             found = true;
         }
     });
     found
 }
 
+pub fn is_running(names: &[&str]) -> bool {
+    any_process(|_, name| names.iter().any(|n| n.eq_ignore_ascii_case(name)))
+}
+
 pub fn pid_alive(pid: u32) -> bool {
-    if pid == 0 {
-        return false;
-    }
-    let mut alive = false;
-    each_process(|p, _| {
-        if p == pid {
-            alive = true;
-        }
-    });
-    alive
+    pid != 0 && any_process(|p, _| p == pid)
 }
 
 pub fn exe_path(pid: u32) -> String {

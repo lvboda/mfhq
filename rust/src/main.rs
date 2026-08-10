@@ -11,6 +11,8 @@ mod bot;
 #[cfg(windows)]
 mod log;
 #[cfg(windows)]
+mod pidfile;
+#[cfg(windows)]
 mod platform;
 #[cfg(windows)]
 mod tasks;

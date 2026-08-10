@@ -1,7 +1,6 @@
 use image::RgbImage;
 use rayon::prelude::*;
 use rustfft::{Fft, FftPlanner, num_complex::Complex};
-use std::sync::Arc;
 
 pub struct Match {
     pub score: f64,
@@ -34,62 +33,50 @@ fn transpose(src: &[C], dst: &mut [C], w: usize, h: usize) {
     }
 }
 
-struct Plans {
-    row: Arc<dyn Fft<f32>>,
-    col: Arc<dyn Fft<f32>>,
-    row_inv: Arc<dyn Fft<f32>>,
-    col_inv: Arc<dyn Fft<f32>>,
-}
-
-fn fft2d(data: &mut [C], scratch: &mut [C], w: usize, h: usize, plans: &Plans, inverse: bool) {
-    let (row, col) = if inverse {
-        (&plans.row_inv, &plans.col_inv)
-    } else {
-        (&plans.row, &plans.col)
-    };
+fn fft2d(data: &mut [C], scratch: &mut [C], w: usize, h: usize, row: &dyn Fft<f32>, col: &dyn Fft<f32>) {
     row.process(data);
     transpose(data, scratch, w, h);
     col.process(scratch);
     transpose(scratch, data, h, w);
 }
 
-/// 每通道的前缀和与平方前缀和，用于 O(1) 求任意窗口的 ΣI 与 ΣI²。
+/// 窗口和的前缀和表，用于 O(1) 求任意窗口的 ΣI 或 ΣI²。
 /// 平方和最大可达 1e11 量级，必须用 f64 累加，f32 的尾数不够。
 struct Integral {
     sum: Vec<f64>,
-    sq: Vec<f64>,
     w: usize,
 }
 
 impl Integral {
-    fn new(raw: &[u8], sw: usize, sh: usize, channel: usize) -> Self {
+    /// channel 为 Some(c) 时累加该通道原值，为 None 时累加三通道平方之和。
+    fn new(raw: &[u8], sw: usize, sh: usize, channel: Option<usize>) -> Self {
         let w = sw + 1;
         let mut sum = vec![0.0f64; w * (sh + 1)];
-        let mut sq = vec![0.0f64; w * (sh + 1)];
         for y in 0..sh {
             let mut row = 0.0f64;
-            let mut row_sq = 0.0f64;
-            let base = y * sw * 3 + channel;
+            let base = y * sw * 3;
             for x in 0..sw {
-                let v = raw[base + x * 3] as f64;
-                row += v;
-                row_sq += v * v;
+                row += match channel {
+                    Some(c) => raw[base + x * 3 + c] as f64,
+                    None => (0..3)
+                        .map(|c| {
+                            let v = raw[base + x * 3 + c] as f64;
+                            v * v
+                        })
+                        .sum(),
+                };
                 sum[(y + 1) * w + x + 1] = sum[y * w + x + 1] + row;
-                sq[(y + 1) * w + x + 1] = sq[y * w + x + 1] + row_sq;
             }
         }
-        Integral { sum, sq, w }
+        Integral { sum, w }
     }
 
-    fn window(&self, x: usize, y: usize, tw: usize, th: usize) -> (f64, f64) {
+    fn window(&self, x: usize, y: usize, tw: usize, th: usize) -> f64 {
         let a = y * self.w + x;
         let b = y * self.w + x + tw;
         let c = (y + th) * self.w + x;
         let d = (y + th) * self.w + x + tw;
-        (
-            self.sum[d] - self.sum[b] - self.sum[c] + self.sum[a],
-            self.sq[d] - self.sq[b] - self.sq[c] + self.sq[a],
-        )
+        self.sum[d] - self.sum[b] - self.sum[c] + self.sum[a]
     }
 }
 
@@ -108,22 +95,20 @@ pub fn match_template(scene: &RgbImage, tmpl: &RgbImage) -> Option<Match> {
     let tmpl_raw = tmpl.as_raw();
     let area = (tw * th) as f64;
 
+    let mut sum = [0.0f64; 3];
+    let mut sum_sq = [0.0f64; 3];
+    for i in 0..tw * th {
+        for c in 0..3 {
+            let v = tmpl_raw[i * 3 + c] as f64;
+            sum[c] += v;
+            sum_sq[c] += v * v;
+        }
+    }
     let mut tmpl_mean = [0.0f64; 3];
-    for i in 0..tw * th {
-        for c in 0..3 {
-            tmpl_mean[c] += tmpl_raw[i * 3 + c] as f64;
-        }
-    }
-    for m in tmpl_mean.iter_mut() {
-        *m /= area;
-    }
-
     let mut tmpl_norm = 0.0f64;
-    for i in 0..tw * th {
-        for c in 0..3 {
-            let d = tmpl_raw[i * 3 + c] as f64 - tmpl_mean[c];
-            tmpl_norm += d * d;
-        }
+    for c in 0..3 {
+        tmpl_mean[c] = sum[c] / area;
+        tmpl_norm += sum_sq[c] - sum[c] * sum[c] / area;
     }
     if tmpl_norm <= 0.0 {
         return None;
@@ -132,12 +117,8 @@ pub fn match_template(scene: &RgbImage, tmpl: &RgbImage) -> Option<Match> {
     let fw = next_fast_len(sw);
     let fh = next_fast_len(sh);
     let mut planner = FftPlanner::<f32>::new();
-    let plans = Plans {
-        row: planner.plan_fft_forward(fw),
-        col: planner.plan_fft_forward(fh),
-        row_inv: planner.plan_fft_inverse(fw),
-        col_inv: planner.plan_fft_inverse(fh),
-    };
+    let (row, col) = (planner.plan_fft_forward(fw), planner.plan_fft_forward(fh));
+    let (row_inv, col_inv) = (planner.plan_fft_inverse(fw), planner.plan_fft_inverse(fh));
 
     let out_w = sw - tw + 1;
     let out_h = sh - th + 1;
@@ -165,12 +146,12 @@ pub fn match_template(scene: &RgbImage, tmpl: &RgbImage) -> Option<Match> {
             }
 
             let mut scratch = vec![C::new(0.0, 0.0); fw * fh];
-            fft2d(&mut si, &mut scratch, fw, fh, &plans, false);
-            fft2d(&mut ti, &mut scratch, fw, fh, &plans, false);
+            fft2d(&mut si, &mut scratch, fw, fh, &*row, &*col);
+            fft2d(&mut ti, &mut scratch, fw, fh, &*row, &*col);
             for i in 0..si.len() {
                 si[i] *= ti[i];
             }
-            fft2d(&mut si, &mut scratch, fw, fh, &plans, true);
+            fft2d(&mut si, &mut scratch, fw, fh, &*row_inv, &*col_inv);
 
             let scale = (fw * fh) as f32;
             let mut out = vec![0.0f32; out_w * out_h];
@@ -183,18 +164,20 @@ pub fn match_template(scene: &RgbImage, tmpl: &RgbImage) -> Option<Match> {
         })
         .collect();
 
-    let integrals: Vec<Integral> = (0..3usize)
+    // 三张原值积分图各自算，平方和只需一张——它在通道间是线性相加的。
+    let sums: Vec<Integral> = (0..3usize)
         .into_par_iter()
-        .map(|c| Integral::new(scene_raw, sw, sh, c))
+        .map(|c| Integral::new(scene_raw, sw, sh, Some(c)))
         .collect();
+    let sq = Integral::new(scene_raw, sw, sh, None);
 
     let mut best = Match { score: -2.0, x: 0, y: 0 };
     for y in 0..out_h {
         for x in 0..out_w {
-            let mut win_norm = 0.0f64;
-            for integral in &integrals {
-                let (s, s2) = integral.window(x, y, tw, th);
-                win_norm += s2 - s * s / area;
+            let mut win_norm = sq.window(x, y, tw, th);
+            for integral in &sums {
+                let s = integral.window(x, y, tw, th);
+                win_norm -= s * s / area;
             }
             if win_norm <= 0.0 {
                 continue;

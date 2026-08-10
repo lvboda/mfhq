@@ -8,7 +8,7 @@ use crate::assets;
 use crate::bot;
 use crate::ce;
 use crate::log::log;
-use crate::platform::{input, window};
+use crate::platform::input;
 
 const MAX_CE_PATCH_ATTEMPTS: u32 = 2;
 
@@ -25,12 +25,12 @@ fn bag_guard(stop: Arc<AtomicBool>) {
     };
 
     while !stop.load(Ordering::Relaxed) {
-        if bot::find(assets::ditu()).is_some() {
+        if bot::find(&assets::DITU).is_some() {
             input::press_for('b', 0.5);
             if wait(1) {
                 break;
             }
-            if bot::find(assets::zhuangbei()).is_some() {
+            if bot::find(&assets::ZHUANGBEI).is_some() {
                 input::press_for('b', 0.5);
             }
             if wait(100) {
@@ -42,27 +42,16 @@ fn bag_guard(stop: Arc<AtomicBool>) {
     }
 }
 
-fn run_with_bag_guard<F: FnOnce()>(body: F) {
-    let stop = Arc::new(AtomicBool::new(false));
-    let handle = {
-        let stop = Arc::clone(&stop);
-        thread::spawn(move || bag_guard(stop))
-    };
-    body();
-    stop.store(true, Ordering::Relaxed);
-    let _ = handle.join();
-}
-
 fn start(round_no: u64, ce_patch_attempts: &mut u32) {
     log(&format!("第 {round_no} 轮开始"));
-    window::focus_game(&bot::GAME_WINDOW_KEYS);
-    bot::wait_appear(assets::ditu(), bot::DEFAULT_WAIT);
-    bot::find_and_click(assets::yingxionggu(), "yingxionggu.jpg");
-    bot::find_and_click(assets::jiaruyingxionggu(), "jiaruyingxionggu.jpg");
+    bot::focus_game();
+    bot::wait_appear(&assets::DITU, bot::DEFAULT_WAIT);
+    bot::find_and_click(&assets::YINGXIONGGU);
+    bot::find_and_click(&assets::JIARUYINGXIONGGU);
     sleep(Duration::from_secs(2));
 
-    if bot::find(assets::yingxionggu10ci()).is_some() {
-        bot::find_and_click(assets::queding(), "queding.jpg");
+    if bot::find(&assets::YINGXIONGGU10CI).is_some() {
+        bot::find_and_click(&assets::QUEDING);
         if *ce_patch_attempts < MAX_CE_PATCH_ATTEMPTS {
             *ce_patch_attempts += 1;
             log(&format!(
@@ -70,7 +59,7 @@ fn start(round_no: u64, ce_patch_attempts: &mut u32) {
             ));
             ce::double_patch(50417, -1);
             sleep(Duration::from_secs(1));
-            window::focus_game(&bot::GAME_WINDOW_KEYS);
+            bot::focus_game();
         } else {
             log(&format!("第 {round_no} 轮：检测到 10 次提示，CE 修改已达最大尝试次数"));
         }
@@ -78,30 +67,36 @@ fn start(round_no: u64, ce_patch_attempts: &mut u32) {
         return;
     }
 
-    if bot::find(assets::shi()).is_some() {
+    if bot::find(&assets::SHI).is_some() {
         log(&format!("第 {round_no} 轮：购买门票"));
-        bot::find_and_click(assets::fou(), "fou.jpg");
-        bot::find_and_click(assets::dianjichakan(), "dianjichakan.jpg");
-        bot::click_within_region(assets::yingxionggumenpiao(), assets::goumai1());
-        bot::find_and_click(assets::mashanggoumai1(), "mashanggoumai1.jpg");
-        bot::find_and_click(assets::cha(), "cha.jpg");
-        bot::find_and_click(assets::jiaruyingxionggu(), "jiaruyingxionggu.jpg");
+        bot::find_and_click(&assets::FOU);
+        bot::find_and_click(&assets::DIANJICHAKAN);
+        bot::click_within_region(&assets::YINGXIONGGUMENPIAO, &assets::GOUMAI1);
+        bot::find_and_click(&assets::MASHANGGOUMAI1);
+        bot::find_and_click(&assets::CHA);
+        bot::find_and_click(&assets::JIARUYINGXIONGGU);
     }
 
     sleep(Duration::from_secs(10));
-    if bot::find(assets::fanhuizhucheng()).is_none() {
-        if bot::find(assets::zhuangbei()).is_some() {
+    if bot::find(&assets::FANHUIZHUCHENG).is_none() {
+        if bot::find(&assets::ZHUANGBEI).is_some() {
             input::press_for('b', 0.5);
         }
         return;
     }
 
-    // 等比赛成绩，无超时，与 Python 版一致。
-    run_with_bag_guard(|| {
-        bot::wait_appear(assets::saichangchengji(), 0.0);
-    });
-    bot::find_and_click(assets::fanhuizhucheng(), "fanhuizhucheng.jpg");
-    bot::find_and_click(assets::shi(), "shi.jpg");
+    // 等比赛成绩，无超时，与 Python 版一致；期间开一个背包守护线程。
+    let stop = Arc::new(AtomicBool::new(false));
+    let guard = {
+        let stop = Arc::clone(&stop);
+        thread::spawn(move || bag_guard(stop))
+    };
+    bot::wait_appear(&assets::SAICHANGCHENGJI, 0.0);
+    stop.store(true, Ordering::Relaxed);
+    let _ = guard.join();
+
+    bot::find_and_click(&assets::FANHUIZHUCHENG);
+    bot::find_and_click(&assets::SHI);
     log(&format!("第 {round_no} 轮完成"));
 }
 

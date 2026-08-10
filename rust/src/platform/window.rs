@@ -6,9 +6,9 @@ use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GetWindowTextW, IsWindowVisible, SW_RESTORE, SetForegroundWindow, ShowWindow,
 };
 
-struct Search {
-    keys: Vec<String>,
-    found: Vec<HWND>,
+struct Search<'a> {
+    keys: &'a [&'a str],
+    found: Option<HWND>,
 }
 
 unsafe extern "system" fn enum_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
@@ -22,26 +22,24 @@ unsafe extern "system" fn enum_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
         if n > 0 {
             let title = String::from_utf16_lossy(&buf[..n as usize]);
             let title = title.trim();
-            if !title.is_empty() && search.keys.iter().any(|k| title.contains(k.as_str())) {
-                search.found.push(hwnd);
+            if !title.is_empty() && search.keys.iter().any(|k| title.contains(k)) {
+                search.found = Some(hwnd);
+                return BOOL(0);
             }
         }
     }
     BOOL(1)
 }
 
-pub fn find(keys: &[&str]) -> Vec<HWND> {
-    let mut search = Search {
-        keys: keys.iter().map(|k| k.to_string()).collect(),
-        found: Vec::new(),
-    };
+fn find(keys: &[&str]) -> Option<HWND> {
+    let mut search = Search { keys, found: None };
     unsafe {
         let _ = EnumWindows(Some(enum_proc), LPARAM(&mut search as *mut Search as isize));
     }
     search.found
 }
 
-pub fn focus(hwnd: HWND) {
+fn focus(hwnd: HWND) {
     unsafe {
         let _ = ShowWindow(hwnd, SW_RESTORE);
         sleep(Duration::from_millis(500));
@@ -51,12 +49,8 @@ pub fn focus(hwnd: HWND) {
 }
 
 /// 对应 Python 的 focus_mofa_haqi_window。
-pub fn focus_game(keys: &[&str]) -> bool {
-    match find(keys).first() {
-        Some(&hwnd) => {
-            focus(hwnd);
-            true
-        }
-        None => false,
+pub fn focus_game(keys: &[&str]) {
+    if let Some(hwnd) = find(keys) {
+        focus(hwnd);
     }
 }
