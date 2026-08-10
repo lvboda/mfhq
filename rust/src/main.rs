@@ -17,6 +17,7 @@ mod tasks;
 
 use std::env;
 
+#[cfg(windows)]
 const SCRIPTS: [&str; 3] = ["controller", "hunzhu", "yingxionggu"];
 
 fn usage() -> ! {
@@ -32,6 +33,7 @@ fn usage() -> ! {
 }
 
 /// 解析等级：位置参数与 -l / -level / --level 等价，默认 1。
+#[cfg(windows)]
 fn parse_level(args: &[String]) -> u8 {
     let mut i = 0;
     while i < args.len() {
