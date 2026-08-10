@@ -22,6 +22,8 @@ pub fn run(out: &str) {
         println!("截图已保存: {out}");
     }
 
+    println!("当前匹配阈值: {:.2}（可用 MFHQ_THRESHOLD 覆盖）", crate::bot::threshold());
+
     let templates: [(&str, &image::RgbImage); 8] = [
         ("fuwenka", assets::fuwenka()),
         ("jinu1", assets::jinu1()),
@@ -45,7 +47,7 @@ pub fn run(out: &str) {
                 m.score,
                 m.x,
                 m.y,
-                if m.score > 0.8 { "  命中" } else { "" }
+                if m.score > crate::bot::threshold() { "  命中" } else { "" }
             ),
             None => println!("{name:<16} 模板比屏幕还大"),
         }

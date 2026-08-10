@@ -5,8 +5,20 @@ use std::time::{Duration, Instant};
 use crate::platform::{input, screen};
 use crate::vision;
 
-pub const THRESHOLD: f64 = 0.8;
+pub const DEFAULT_THRESHOLD: f64 = 0.7;
 pub const DEFAULT_WAIT: f64 = 40.0;
+
+/// 匹配阈值，可用 MFHQ_THRESHOLD 覆盖，便于在目标机器上直接调参而无需重新编译。
+pub fn threshold() -> f64 {
+    static CELL: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
+    *CELL.get_or_init(|| {
+        std::env::var("MFHQ_THRESHOLD")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .filter(|v: &f64| *v > 0.0 && *v < 1.0)
+            .unwrap_or(DEFAULT_THRESHOLD)
+    })
+}
 
 pub use crate::config::{GAME_PROCESS_NAMES, GAME_WINDOW_KEYS};
 
@@ -14,7 +26,7 @@ pub use crate::config::{GAME_PROCESS_NAMES, GAME_WINDOW_KEYS};
 pub fn find(tmpl: &RgbImage) -> Option<(i32, i32)> {
     let scene = screen::capture()?;
     let m = vision::match_template(&scene, tmpl)?;
-    if m.score <= THRESHOLD {
+    if m.score <= threshold() {
         return None;
     }
     Some((
@@ -70,12 +82,12 @@ pub fn click_if_exists(tmpl: &RgbImage, offset: (i32, i32)) -> bool {
 pub fn find_within_region(base: &RgbImage, target: &RgbImage) -> Option<(i32, i32)> {
     let scene = screen::capture()?;
     let b = vision::match_template(&scene, base)?;
-    if b.score <= THRESHOLD {
+    if b.score <= threshold() {
         return None;
     }
     let region = image::imageops::crop_imm(&scene, b.x, b.y, base.width(), base.height()).to_image();
     let t = vision::match_template(&region, target)?;
-    if t.score <= THRESHOLD {
+    if t.score <= threshold() {
         return None;
     }
     Some((
