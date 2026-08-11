@@ -25,25 +25,31 @@ fn locate() -> Option<(PathBuf, PathBuf)> {
 
     for candidate in candidates.into_iter().flatten() {
         if candidate.is_file() {
-            let dir = candidate.parent()?.to_path_buf();
-            return Some((dir, candidate));
+            if let Some(dir) = candidate.parent() {
+                return Some((dir.to_path_buf(), candidate));
+            }
+            continue;
         }
-        if candidate.is_dir() {
-            for name in CE_EXE_NAMES {
-                let exe = candidate.join(name);
-                if exe.exists() {
-                    return Some((candidate, exe));
-                }
+        if !candidate.is_dir() {
+            continue;
+        }
+        for name in CE_EXE_NAMES {
+            let exe = candidate.join(name);
+            if exe.exists() {
+                return Some((candidate, exe));
             }
-            let exes: Vec<PathBuf> = fs::read_dir(&candidate)
-                .ok()?
-                .flatten()
-                .map(|e| e.path())
-                .filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("exe")))
-                .collect();
-            if exes.len() == 1 {
-                return Some((candidate, exes[0].clone()));
-            }
+        }
+        // 单个候选目录读取失败只跳过它，不能放弃后面的候选。
+        let Ok(entries) = fs::read_dir(&candidate) else {
+            continue;
+        };
+        let exes: Vec<PathBuf> = entries
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("exe")))
+            .collect();
+        if exes.len() == 1 {
+            return Some((candidate, exes[0].clone()));
         }
     }
     None

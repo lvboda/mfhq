@@ -192,3 +192,62 @@ pub fn match_template(scene: &RgbImage, tmpl: &RgbImage) -> Option<Match> {
 
     Some(best)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::match_template;
+    use crate::assets::{self, Template};
+
+    /// 用仓库里已有的模板互相配对当场景与模板，不引入额外 fixture。
+    /// 期望值由 OpenCV 的 TM_CCOEFF_NORMED 算出，钉住本实现不随重构漂移。
+    #[test]
+    fn matches_opencv_reference() {
+        let cases: [(&Template, &Template, f64, u32, u32); 5] = [
+            (&assets::YINGXIONGGUMENPIAO, &assets::GOUMAI1, 0.964285, 118, 55),
+            (&assets::YINGXIONGGU10CI, &assets::CHA, 0.159610, 145, 0),
+            (&assets::MAICHONGAOYI, &assets::WEIJINU, 0.479247, 52, 35),
+            (&assets::JINU3, &assets::GUANBI, 0.182202, 0, 42),
+            (&assets::DIANJICHAKAN, &assets::DENGLU, 0.108066, 4, 13),
+        ];
+
+        for (scene, tmpl, want_score, want_x, want_y) in cases {
+            let m = match_template(scene.image(), tmpl.image())
+                .unwrap_or_else(|| panic!("{} / {} 未返回结果", scene.name, tmpl.name));
+            assert!(
+                (m.score - want_score).abs() < 1e-3,
+                "{} / {}: 分数 {} 期望 {want_score}",
+                scene.name,
+                tmpl.name,
+                m.score
+            );
+            assert_eq!(
+                (m.x, m.y),
+                (want_x, want_y),
+                "{} / {}: 位置不符",
+                scene.name,
+                tmpl.name
+            );
+        }
+    }
+
+    /// 27 张内嵌模板都必须能解码且非空——损坏或漏加会在这里暴露，
+    /// 同时这一条覆盖了 ALL 里的每个静态项。
+    #[test]
+    fn all_templates_decode() {
+        assert_eq!(assets::ALL.len(), 27);
+        for tmpl in assets::ALL {
+            let img = tmpl.image();
+            assert!(
+                img.width() > 0 && img.height() > 0,
+                "{} 解码后尺寸为零",
+                tmpl.name
+            );
+        }
+    }
+
+    /// 模板比场景大时必须返回 None 而不是 panic。
+    #[test]
+    fn rejects_oversized_template() {
+        assert!(match_template(assets::GOUMAI1.image(), assets::YINGXIONGGUMENPIAO.image()).is_none());
+    }
+}

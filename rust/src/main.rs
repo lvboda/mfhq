@@ -1,7 +1,7 @@
+#[cfg(any(windows, test))]
+mod assets;
 mod vision;
 
-#[cfg(windows)]
-mod assets;
 #[cfg(windows)]
 mod ce;
 #[cfg(windows)]
