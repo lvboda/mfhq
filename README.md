@@ -1,6 +1,10 @@
 # MFHQ scripts
 
-This project uses a simple `src` layout: shared modules stay in `src/common`, executable scripts stay directly under `src`, and `src/app.py` is the unified command entry.
+Two implementations live side by side. The Python one under `src/` is the original; the Rust one
+under `rust/` is a port that is smaller and cross-compiles from macOS. See `rust/README.md` for it.
+
+The Python layout is simple: shared modules stay in `src/common`, executable scripts stay directly
+under `src`, and `src/app.py` is the unified command entry.
 
 ## Structure
 
@@ -17,6 +21,7 @@ This project uses a simple `src` layout: shared modules stay in `src/common`, ex
 - `src/controller.py`: resident scheduler/controller script.
 - `scripts/build.py`: shared build implementation.
 - `scripts/*.cmd`: Windows double-click build wrappers.
+- `rust/`: the Rust port, self-contained with its own templates and build. See `rust/README.md`.
 
 ## Build On Windows
 
