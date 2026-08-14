@@ -7,7 +7,7 @@ use crate::log::log;
 use crate::platform::{input, process, screen, window};
 use crate::vision;
 
-pub const DEFAULT_THRESHOLD: f64 = 0.7;
+pub const DEFAULT_THRESHOLD: f64 = 0.8;
 pub const DEFAULT_WAIT: f64 = 40.0;
 
 /// 匹配阈值，可用 MFHQ_THRESHOLD 覆盖，便于在目标机器上直接调参而无需重新编译。
